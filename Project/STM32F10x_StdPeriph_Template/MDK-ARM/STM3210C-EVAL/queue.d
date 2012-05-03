@@ -1,0 +1,12 @@
+.\STM3210C-EVAL\queue.o: ..\..\..\Source\queue.c
+.\STM3210C-EVAL\queue.o: C:\Keil\ARM\RV31\Inc\stdlib.h
+.\STM3210C-EVAL\queue.o: C:\Keil\ARM\RV31\Inc\string.h
+.\STM3210C-EVAL\queue.o: ..\..\..\Source\include\FreeRTOS.h
+.\STM3210C-EVAL\queue.o: C:\Keil\ARM\RV31\Inc\stddef.h
+.\STM3210C-EVAL\queue.o: ..\..\..\Source\include\projdefs.h
+.\STM3210C-EVAL\queue.o: ..\FreeRTOSConfig.h
+.\STM3210C-EVAL\queue.o: ..\..\..\Source\include\portable.h
+.\STM3210C-EVAL\queue.o: ..\..\..\Source\portable\RVDS\ARM_CM3\portmacro.h
+.\STM3210C-EVAL\queue.o: ..\..\..\Source\include\mpu_wrappers.h
+.\STM3210C-EVAL\queue.o: ..\..\..\Source\include\task.h
+.\STM3210C-EVAL\queue.o: ..\..\..\Source\include\list.h

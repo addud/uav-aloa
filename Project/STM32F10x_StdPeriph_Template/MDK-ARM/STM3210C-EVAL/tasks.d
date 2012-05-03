@@ -1,0 +1,15 @@
+.\STM3210C-EVAL\tasks.o: ..\..\..\Source\tasks.c
+.\STM3210C-EVAL\tasks.o: C:\Keil\ARM\RV31\Inc\stdio.h
+.\STM3210C-EVAL\tasks.o: C:\Keil\ARM\RV31\Inc\stdlib.h
+.\STM3210C-EVAL\tasks.o: C:\Keil\ARM\RV31\Inc\string.h
+.\STM3210C-EVAL\tasks.o: ..\..\..\Source\include\FreeRTOS.h
+.\STM3210C-EVAL\tasks.o: C:\Keil\ARM\RV31\Inc\stddef.h
+.\STM3210C-EVAL\tasks.o: ..\..\..\Source\include\projdefs.h
+.\STM3210C-EVAL\tasks.o: ..\FreeRTOSConfig.h
+.\STM3210C-EVAL\tasks.o: ..\..\..\Source\include\portable.h
+.\STM3210C-EVAL\tasks.o: ..\..\..\Source\portable\RVDS\ARM_CM3\portmacro.h
+.\STM3210C-EVAL\tasks.o: ..\..\..\Source\include\mpu_wrappers.h
+.\STM3210C-EVAL\tasks.o: ..\..\..\Source\include\task.h
+.\STM3210C-EVAL\tasks.o: ..\..\..\Source\include\list.h
+.\STM3210C-EVAL\tasks.o: ..\..\..\Source\include\timers.h
+.\STM3210C-EVAL\tasks.o: ..\..\..\Source\include\StackMacros.h
