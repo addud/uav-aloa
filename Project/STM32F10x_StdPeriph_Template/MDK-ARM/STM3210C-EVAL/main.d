@@ -32,6 +32,7 @@
 .\STM3210C-EVAL\main.o: ..\..\..\Utilities\STM32_EVAL\stm3210c_eval/stm3210c_eval.h
 .\STM3210C-EVAL\main.o: ..\..\..\Utilities\STM32_EVAL\stm32_eval.h
 .\STM3210C-EVAL\main.o: C:\Keil\ARM\RV31\Inc\stdio.h
+.\STM3210C-EVAL\main.o: ..\PPM.h
 .\STM3210C-EVAL\main.o: ..\..\..\Utilities\STM32_EVAL\STM3210C_EVAL\stm3210c_eval_lcd.h
 .\STM3210C-EVAL\main.o: ..\..\..\Utilities\STM32_EVAL\STM3210C_EVAL\../Common/fonts.h
 .\STM3210C-EVAL\main.o: ..\..\..\Source\include\FreeRTOS.h

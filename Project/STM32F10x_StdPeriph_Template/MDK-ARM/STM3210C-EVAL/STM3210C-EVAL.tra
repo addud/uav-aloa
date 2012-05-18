@@ -3,6 +3,7 @@
 ### Creating ADS-LD Command Line
 ### List of Objects: adding '".\stm3210c-eval\stm32f10x_it.o"'
 ### List of Objects: adding '".\stm3210c-eval\main.o"'
+### List of Objects: adding '".\stm3210c-eval\ppm.o"'
 ### List of Objects: adding '".\stm3210c-eval\stm32f10x_rcc.o"'
 ### List of Objects: adding '".\stm3210c-eval\stm32f10x_gpio.o"'
 ### List of Objects: adding '".\stm3210c-eval\misc.o"'
@@ -39,14 +40,14 @@
 ### List of Objects: adding '".\stm3210c-eval\queue.o"'
 ### List of Objects: adding '".\stm3210c-eval\tasks.o"'
 ### ADS-LD Command completed:
---cpu Cortex-M3 ".\stm3210c-eval\stm32f10x_it.o" ".\stm3210c-eval\main.o" ".\stm3210c-eval\stm32f10x_rcc.o" ".\stm3210c-eval\stm32f10x_gpio.o" ".\stm3210c-eval\misc.o" ".\stm3210c-eval\stm32f10x_exti.o" ".\stm3210c-eval\stm32f10x_spi.o" ".\stm3210c-eval\stm32f10x_fsmc.o" ".\stm3210c-eval\stm32f10x_usart.o" ".\stm3210c-eval\stm32f10x_sdio.o" ".\stm3210c-eval\stm32f10x_dma.o" ".\stm3210c-eval\stm32f10x_i2c.o" ".\stm3210c-eval\stm32f10x_adc.o" ".\stm3210c-eval\stm32f10x_bkp.o" ".\stm3210c-eval\stm32f10x_can.o" ".\stm3210c-eval\stm32f10x_cec.o" ".\stm3210c-eval\stm32f10x_crc.o" ".\stm3210c-eval\stm32f10x_dac.o" ".\stm3210c-eval\stm32f10x_dbgmcu.o" ".\stm3210c-eval\stm32f10x_flash.o" ".\stm3210c-eval\stm32f10x_iwdg.o" ".\stm3210c-eval\stm32f10x_pwr.o" ".\stm3210c-eval\stm32f10x_rtc.o" ".\stm3210c-eval\stm32f10x_tim.o" ".\stm3210c-eval\stm32f10x_wwdg.o" ".\stm3210c-eval\core_cm3.o" ".\stm3210c-eval\system_stm32f10x.o" ".\stm3210c-eval\stm32_eval.o" ".\stm3210c-eval\stm32_eval_spi_sd.o" ".\stm3210c-eval\stm3210c_eval_lcd.o" ".\stm3210c-eval\stm3210c_eval_ioe.o" ".\stm3210c-eval\startup_stm32f10x_cl.o" ".\stm3210c-eval\heap_2.o" ".\stm3210c-eval\list.o" ".\stm3210c-eval\port.o" ".\stm3210c-eval\queue.o" ".\stm3210c-eval\tasks.o" --library_type=microlib --strict --scatter ".\STM3210C-EVAL\STM3210C-EVAL.sct" 
+--cpu Cortex-M3 ".\stm3210c-eval\stm32f10x_it.o" ".\stm3210c-eval\main.o" ".\stm3210c-eval\ppm.o" ".\stm3210c-eval\stm32f10x_rcc.o" ".\stm3210c-eval\stm32f10x_gpio.o" ".\stm3210c-eval\misc.o" ".\stm3210c-eval\stm32f10x_exti.o" ".\stm3210c-eval\stm32f10x_spi.o" ".\stm3210c-eval\stm32f10x_fsmc.o" ".\stm3210c-eval\stm32f10x_usart.o" ".\stm3210c-eval\stm32f10x_sdio.o" ".\stm3210c-eval\stm32f10x_dma.o" ".\stm3210c-eval\stm32f10x_i2c.o" ".\stm3210c-eval\stm32f10x_adc.o" ".\stm3210c-eval\stm32f10x_bkp.o" ".\stm3210c-eval\stm32f10x_can.o" ".\stm3210c-eval\stm32f10x_cec.o" ".\stm3210c-eval\stm32f10x_crc.o" ".\stm3210c-eval\stm32f10x_dac.o" ".\stm3210c-eval\stm32f10x_dbgmcu.o" ".\stm3210c-eval\stm32f10x_flash.o" ".\stm3210c-eval\stm32f10x_iwdg.o" ".\stm3210c-eval\stm32f10x_pwr.o" ".\stm3210c-eval\stm32f10x_rtc.o" ".\stm3210c-eval\stm32f10x_tim.o" ".\stm3210c-eval\stm32f10x_wwdg.o" ".\stm3210c-eval\core_cm3.o" ".\stm3210c-eval\system_stm32f10x.o" ".\stm3210c-eval\stm32_eval.o" ".\stm3210c-eval\stm32_eval_spi_sd.o" ".\stm3210c-eval\stm3210c_eval_lcd.o" ".\stm3210c-eval\stm3210c_eval_ioe.o" ".\stm3210c-eval\startup_stm32f10x_cl.o" ".\stm3210c-eval\heap_2.o" ".\stm3210c-eval\list.o" ".\stm3210c-eval\port.o" ".\stm3210c-eval\queue.o" ".\stm3210c-eval\tasks.o" --library_type=microlib --strict --scatter ".\STM3210C-EVAL\STM3210C-EVAL.sct" 
 --summary_stderr --info summarysizes --map --xref --callgraph --symbols 
 --info sizes --info totals --info unused --info veneers 
  --list ".\STM3210C-EVAL\STM3210C-EVAL.map" -o ".\STM3210C-EVAL\STM3210C-EVAL.axf"### Preparing Environment (PrepEnvAds)
 ### ADS-LD Output File: '.\STM3210C-EVAL\STM3210C-EVAL.axf'
 ### ADS-LD Command File: '.\STM3210C-EVAL\STM3210C-EVAL.lnp'
 ### Checking for dirty Components...
-### Creating CmdFile '.\STM3210C-EVAL\STM3210C-EVAL.lnp', Handle=0x00000420
+### Creating CmdFile '.\STM3210C-EVAL\STM3210C-EVAL.lnp', Handle=0x000001D0
 ### Writing '.lnp' file
 ### ADS-LD Command file '.\STM3210C-EVAL\STM3210C-EVAL.lnp' is ready.
 ### ADS-LD: About to start ADS-LD Thread.

@@ -23,6 +23,7 @@
 #include "stm32f10x.h"
 #include "stm32_eval.h"
 #include <stdio.h>
+#include "PPM.h"
 
 #ifdef USE_STM32100B_EVAL
  #include "stm32100b_eval_lcd.h"
@@ -277,6 +278,8 @@ int main(void)
   ST seem to stand out from the crowd by not doing that by default. Using 
   the ST library, it is normally done using */
   NVIC_PriorityGroupConfig( NVIC_PriorityGroup_4 );
+
+	initPPM();
 
   xTaskCreate( MyTask, ( signed portCHAR * ) "MyTask", configMINIMAL_STACK_SIZE, (void*)NULL, 2, NULL );
   xTaskCreate( AddTask, ( signed portCHAR * ) "AddTask", configMINIMAL_STACK_SIZE, (void*)NULL, 2, NULL );
