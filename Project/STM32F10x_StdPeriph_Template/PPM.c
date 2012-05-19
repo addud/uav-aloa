@@ -273,10 +273,23 @@ void TIM3_IRQHandler(void)
 				if (PPM_out[index_out])	{
 					compare += PPM_out[index_out] + PPM_NEUTRAL_HIGH;
 					elapsedTime += PPM_out[index_out] + PPM_NEUTRAL_HIGH;
-					PPM_out[index_out] = 0;
+
 				} else {
-					compare += PPM_in[index_out] + PPM_NEUTRAL_HIGH;
-					elapsedTime += PPM_in[index_out] + PPM_NEUTRAL_HIGH;
+
+					PPM_out[index_out] = PPM_in[index_out] + PPM_diff[index_out] + PPM_NEUTRAL_HIGH;
+
+					if (PPM_out[index_out] < PPM_MIN_HIGH) {
+						PPM_out[index_out] = PPM_MIN_HIGH;
+					} else if (PPM_out[index_out] > PPM_MAX_HIGH) {
+						PPM_out[index_out] = PPM_MAX_HIGH;
+					}
+					compare += PPM_out[index_out];
+					elapsedTime += PPM_out[index_out];
+
+					/* Once set, the new PPM difference is applied every time 
+					To stop sending it, it must be cleared manually (set to 0) */
+//					PPM_diff[index_out] = 0;
+
 				}
 				index_out++;
 			}
@@ -292,13 +305,13 @@ void setChannel(uint8_t channel, int16_t value) {
 
 //	value += PPM_NEUTRAL_HIGH; 
 
-	if (value < PPM_MIN_HIGH - PPM_NEUTRAL_HIGH) {
-		value = PPM_MIN_HIGH;
-	} else if (value > PPM_MAX_HIGH  - PPM_NEUTRAL_HIGH) {
-		value = PPM_MAX_HIGH;
-	}
+//	if (value < PPM_MIN_HIGH - PPM_NEUTRAL_HIGH) {
+//		value = PPM_MIN_HIGH;
+//	} else if (value > PPM_MAX_HIGH  - PPM_NEUTRAL_HIGH) {
+//		value = PPM_MAX_HIGH;
+//	}
 
-	PPM_out[channel] = value;
+	PPM_diff[channel] = value;
 }
 
 int16_t getNick() {
@@ -325,9 +338,21 @@ int16_t getPoti3() {
 int16_t getPoti4() {
 	return PPM_in[CH_POTI4];
 }
+int16_t getPoti5() {
+	return PPM_in[CH_POTI5];
+}
 int16_t getPoti6() {
 	return PPM_in[CH_POTI6];
 }
+int16_t getPoti7() {
+	return PPM_in[CH_POTI7];
+}
+int16_t getPoti8() {
+	return PPM_in[CH_POTI8];
+}
+
+/* Once set, the new PPM difference is applied every time 
+To stop sending it, it must be cleared manually (set to 0) */
 void setNick(int16_t value) {
 	setChannel(CH_NICK,value);
 }
@@ -353,15 +378,15 @@ void setPoti4(int16_t value) {
 	setChannel(CH_POTI4,value);
 }
 void setPoti5(int16_t value) {
-	setChannel(CH_POTI1,value);
+	setChannel(CH_POTI5,value);
 }
 void setPoti6(int16_t value) {
-	setChannel(CH_POTI2,value);
+	setChannel(CH_POTI6,value);
 }
 void setPoti7(int16_t value) {
-	setChannel(CH_POTI3,value);
+	setChannel(CH_POTI7,value);
 }
 void setPoti8(int16_t value) {
-	setChannel(CH_POTI4,value);
+	setChannel(CH_POTI8,value);
 }
 
