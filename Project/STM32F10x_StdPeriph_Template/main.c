@@ -90,7 +90,21 @@
 #define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
 #endif /* __GNUC__ */
 
-uint16_t readVoltage = 0;
+
+#define OUT_OF_RANGE        0xFFFF
+#define Kp                  0.034
+#define Kd                  0
+#define Tsample             (50 / portTICK_RATE_MS)
+
+volatile uint16_t readVoltage = 0;
+volatile uint16_t distanceCm = 0;
+volatile uint16_t distanceAverage = 0;
+volatile uint16_t distanceCurrent = 0;
+volatile uint16_t distanceOld = 0;
+volatile uint16_t throttleDiff = 0;
+
+int16_t altitudeHold = 0, positionHold = 0;
+int16_t autoLanding = 0;
 
 /* Private functions ---------------------------------------------------------*/
 void MyTask(void *pvParameters)
@@ -120,9 +134,9 @@ void GPIO_Configuration_ADC(void)
   GPIO_InitTypeDef GPIO_InitStructure;
 
   /* Configure PC.04 (ADC Channel14) as analog input -------------------------*/
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AIN;
-  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  GPIO_Init(GPIOC, &GPIO_InitStructure);
 }
 
 void RCC_Configuration_ADC(void)
@@ -137,13 +151,15 @@ void RCC_Configuration_ADC(void)
   /* Enable peripheral clocks ------------------------------------------------*/
 
   /* Enable ADC1 and GPIOC clock */
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_GPIOA, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_GPIOC, ENABLE);
 }
 
 void DataTask(void *pvParameters)
 {
-  ADC_InitTypeDef ADC_InitStructure;
+ ADC_InitTypeDef ADC_InitStructure;
   portTickType lastWake = xTaskGetTickCount();
+  uint8_t i = 0;
+  uint16_t distances[4];
   
 
   // init ADC
@@ -155,7 +171,7 @@ void DataTask(void *pvParameters)
   
   /* ADC1 configuration ------------------------------------------------------*/
   ADC_InitStructure.ADC_Mode = ADC_Mode_Independent;
-  ADC_InitStructure.ADC_ScanConvMode = ENABLE;
+  ADC_InitStructure.ADC_ScanConvMode = DISABLE;
   ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
   ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
   ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
@@ -163,7 +179,7 @@ void DataTask(void *pvParameters)
   ADC_Init(ADC1, &ADC_InitStructure);
 
   /* ADC1 regular channel14 configuration */ 
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_2, 1, ADC_SampleTime_55Cycles5);
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_14, 1, ADC_SampleTime_55Cycles5);
   
   /* Enable ADC1 */
   ADC_Cmd(ADC1, ENABLE);
@@ -186,13 +202,81 @@ void DataTask(void *pvParameters)
 
   for(;;) {
 
-    readVoltage = ADC_GetConversionValue(ADC1);
+    readVoltage = (uint16_t)((uint32_t)(3000 * ADC_GetConversionValue(ADC1)) / 0xFFF); // conversion to voltage "mV" units
+    //liniarize the IR sensor curve equation
+    if((readVoltage > 1000) && (readVoltage < 2700)){
+      distanceCm = (uint16_t)((uint32_t)(3460 - readVoltage) / 38);
+    }
+    else if((readVoltage > 400) && (readVoltage <= 1000)){
+      distanceCm = (uint16_t)((uint32_t)(3 * (1040 - readVoltage)) / 20);
+    }
+    else{
+      distanceCm = OUT_OF_RANGE;  // out of range
+    }
 
+    //store last measurement
+    if( distanceCm != OUT_OF_RANGE ){
+      distances[i] =  distanceCm;
+      i++;
+    }
+    else{
+      for(i = 0; i < 4; i++) distances[i] = OUT_OF_RANGE;
+      i = 0;
+    }
+    
+    if(i > 3) i = 0;  //ring buffer
 
-    vTaskDelayUntil(&lastWake, 10 / portTICK_RATE_MS);
+    // average of the last 4 measurements
+    if(distances[3] != OUT_OF_RANGE){
+      distanceAverage = (uint16_t)((uint32_t)(distances[0] + distances[1] + distances[2] + distances[3]) / 4); 
+    }
+    else{
+      distanceAverage = OUT_OF_RANGE;
+    }
+
+    vTaskDelayUntil(&lastWake, 50 / portTICK_RATE_MS);
   }
+}
 
+void PlannerTask(void *pvParameters){
 
+  portTickType lastWake = xTaskGetTickCount();
+  uint16_t distanceP, distanceD;
+  int16_t throttlePPM;
+
+  for(;;){
+
+    // check hovering flag(altitude hold) && autolanding switch
+    // read distance
+    // read hovering Throttle value
+    // PID decrese hovering value and measure the altitude
+    // loop till "0 m"
+  
+    //altitudeHold = getPoti1();
+    //positionHold = getPoti2();
+    //autoLanding = getPoti6();
+
+    if((altitudeHold > 0x390) && ((positionHold > -20) && (positionHold < 20)) && (autoLanding > 390))
+    {
+      throttlePPM = getGas();
+  
+      distanceCurrent = distanceAverage; //use mutex
+  
+      distanceP = distanceCurrent - 0;
+      distanceD = distanceOld - distanceCurrent;
+  
+      throttleDiff = Kp * distanceP + Kd * distanceD / Tsample;
+  
+      throttlePPM -= throttleDiff;
+  
+      // set new throttle value
+      setGas(throttlePPM);
+  
+      distanceOld = distanceCurrent;
+    }        
+
+    vTaskDelayUntil(&lastWake, 100 / portTICK_RATE_MS);
+  }
 }
 
 /**
@@ -209,66 +293,24 @@ int main(void)
        system_stm32f10x.c file
      */     
 
-  /* Initialize LEDs, Key Button, LCD and COM port(USART) available on
-     STM3210X-EVAL board ******************************************************/
-  STM_EVAL_LEDInit(LED1);
-  STM_EVAL_LEDInit(LED2);
-  STM_EVAL_LEDInit(LED3);
-  STM_EVAL_LEDInit(LED4);
+//
+//  /* USARTx configured as follow:
+//        - BaudRate = 115200 baud  
+//        - Word Length = 8 Bits
+//        - One Stop Bit
+//        - No parity
+//        - Hardware flow control disabled (RTS and CTS signals)
+//        - Receive and transmit enabled
+//  */
+//  USART_InitStructure.USART_BaudRate = 115200;
+//  USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+//  USART_InitStructure.USART_StopBits = USART_StopBits_1;
+//  USART_InitStructure.USART_Parity = USART_Parity_No;
+//  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+//  USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+//
+//  STM_EVAL_COMInit(COM1, &USART_InitStructure);
 
-  /* USARTx configured as follow:
-        - BaudRate = 115200 baud  
-        - Word Length = 8 Bits
-        - One Stop Bit
-        - No parity
-        - Hardware flow control disabled (RTS and CTS signals)
-        - Receive and transmit enabled
-  */
-  USART_InitStructure.USART_BaudRate = 115200;
-  USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-  USART_InitStructure.USART_StopBits = USART_StopBits_1;
-  USART_InitStructure.USART_Parity = USART_Parity_No;
-  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-  USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-
-  STM_EVAL_COMInit(COM1, &USART_InitStructure);
-
-  /* Initialize the LCD */
-#ifdef USE_STM32100B_EVAL
-  STM32100B_LCD_Init();
-#elif defined (USE_STM3210B_EVAL)
-  STM3210B_LCD_Init();
-#elif defined (USE_STM3210E_EVAL)
-  STM3210E_LCD_Init();
-#elif defined (USE_STM3210C_EVAL)
-  STM3210C_LCD_Init();
-#elif defined (USE_STM32100E_EVAL)
-  STM32100E_LCD_Init();  
-#endif
-
-  /* Display message on STM3210X-EVAL LCD *************************************/
-  /* Clear the LCD */ 
-  LCD_Clear(LCD_COLOR_WHITE);
-
-  /* Set the LCD Back Color */
-  LCD_SetBackColor(LCD_COLOR_BLUE);
-  /* Set the LCD Text Color */
-  LCD_SetTextColor(LCD_COLOR_WHITE);
-  LCD_DisplayStringLine(LCD_LINE_0, (uint8_t *)MESSAGE1);
-  LCD_DisplayStringLine(LCD_LINE_1, (uint8_t *)MESSAGE2);
-  LCD_DisplayStringLine(LCD_LINE_2, (uint8_t *)MESSAGE3);
-
-  /* Retarget the C library printf function to the USARTx, can be USART1 or USART2
-     depending on the EVAL board you are using ********************************/
-  printf("\n\r %s", MESSAGE1);
-  printf(" %s", MESSAGE2);
-  printf(" %s\n\r", MESSAGE3);
-
-  /* Turn on leds available on STM3210X-EVAL **********************************/
-  STM_EVAL_LEDOn(LED1);
-  STM_EVAL_LEDOn(LED2);
-  STM_EVAL_LEDOn(LED3);
-  STM_EVAL_LEDOn(LED4);
 
   /* Add your application code here */
 
@@ -281,10 +323,11 @@ int main(void)
 
 	initPPM();
 
-  xTaskCreate( MyTask, ( signed portCHAR * ) "MyTask", configMINIMAL_STACK_SIZE, (void*)NULL, 2, NULL );
-  xTaskCreate( AddTask, ( signed portCHAR * ) "AddTask", configMINIMAL_STACK_SIZE, (void*)NULL, 2, NULL );
+  //xTaskCreate( MyTask, ( signed portCHAR * ) "MyTask", configMINIMAL_STACK_SIZE, (void*)NULL, 2, NULL );
+  //xTaskCreate( AddTask, ( signed portCHAR * ) "AddTask", configMINIMAL_STACK_SIZE, (void*)NULL, 2, NULL );
 
-  xTaskCreate( DataTask, ( signed portCHAR * ) "DataTask", configMINIMAL_STACK_SIZE, (void*)NULL, 2, NULL );
+  xTaskCreate( DataTask, ( signed portCHAR * ) "DataTask", configMINIMAL_STACK_SIZE+64, (void*)NULL, 2, NULL );
+  xTaskCreate( PlannerTask, ( signed portCHAR * ) "PlannerTask", configMINIMAL_STACK_SIZE+128, (void*)NULL, 3, NULL );
   
   
   /* Start the scheduler. */
@@ -305,10 +348,10 @@ PUTCHAR_PROTOTYPE
 {
   /* Place your implementation of fputc here */
   /* e.g. write a character to the USART */
-  USART_SendData(EVAL_COM1, (uint8_t) ch);
+  //USART_SendData(EVAL_COM1, (uint8_t) ch);
 
   /* Loop until the end of transmission */
-  while (USART_GetFlagStatus(EVAL_COM1, USART_FLAG_TC) == RESET)
+  //while (USART_GetFlagStatus(EVAL_COM1, USART_FLAG_TC) == RESET)
   {}
 
   return ch;
