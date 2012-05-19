@@ -325,6 +325,9 @@ int16_t getPoti3() {
 int16_t getPoti4() {
 	return PPM_in[CH_POTI4];
 }
+int16_t getPoti6() {
+	return PPM_in[CH_POTI6];
+}
 void setNick(int16_t value) {
 	setChannel(CH_NICK,value);
 }
