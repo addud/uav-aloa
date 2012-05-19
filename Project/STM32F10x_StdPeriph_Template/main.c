@@ -92,7 +92,7 @@
 
 
 #define OUT_OF_RANGE        0xFFFF
-#define Kp                  0.034
+#define Kp                  1//0.1
 #define Kd                  0
 #define Tsample             (50 / portTICK_RATE_MS)
 
@@ -202,13 +202,15 @@ void DataTask(void *pvParameters)
 
   for(;;) {
 
-    readVoltage = (uint16_t)((uint32_t)(3000 * ADC_GetConversionValue(ADC1)) / 0xFFF); // conversion to voltage "mV" units
+    readVoltage = (uint16_t)((uint32_t)(3000 * ADC_GetConversionValue(ADC1)) / 0x1000); // conversion to voltage "mV" units
     //liniarize the IR sensor curve equation
-    if((readVoltage > 1000) && (readVoltage < 2700)){
-      distanceCm = (uint16_t)((uint32_t)(3460 - readVoltage) / 38);
+    if((readVoltage > 850) && (readVoltage < 2150)){
+      //distanceCm = (uint16_t)((uint32_t)(3460 - readVoltage) / 38);
+      distanceCm = (uint16_t)((uint32_t)(3*(2575 - readVoltage)) / 86);
     }
-    else if((readVoltage > 400) && (readVoltage <= 1000)){
-      distanceCm = (uint16_t)((uint32_t)(3 * (1040 - readVoltage)) / 20);
+    else if((readVoltage > 400) && (readVoltage <= 850)){
+      //distanceCm = (uint16_t)((uint32_t)(3 * (1400 - readVoltage)) / 20);
+      distanceCm = (uint16_t)((1150 - readVoltage) / 5);
     }
     else{
       distanceCm = OUT_OF_RANGE;  // out of range
@@ -241,8 +243,8 @@ void DataTask(void *pvParameters)
 void PlannerTask(void *pvParameters){
 
   portTickType lastWake = xTaskGetTickCount();
-  uint16_t distanceP, distanceD;
-  int16_t throttlePPM;
+static uint16_t distanceP, distanceD;
+static int16_t throttlePPM;
 
   for(;;){
 
@@ -252,11 +254,11 @@ void PlannerTask(void *pvParameters){
     // PID decrese hovering value and measure the altitude
     // loop till "0 m"
   
-    //altitudeHold = getPoti1();
-    //positionHold = getPoti2();
-    //autoLanding = getPoti6();
+    altitudeHold = getPoti1();
+    positionHold = getPoti2();
+    autoLanding = getPoti6();
 
-    if((altitudeHold > 0x390) && ((positionHold > -20) && (positionHold < 20)) && (autoLanding > 390))
+    if((altitudeHold > 390) && ((positionHold > -20) && (positionHold < 20)) && (autoLanding > 390))
     {
       throttlePPM = getGas();
   
@@ -267,7 +269,7 @@ void PlannerTask(void *pvParameters){
   
       throttleDiff = Kp * distanceP + Kd * distanceD / Tsample;
   
-      throttlePPM -= throttleDiff;
+      throttlePPM -= (int16_t)throttleDiff;
   
       // set new throttle value
       setGas(throttlePPM);
@@ -275,7 +277,7 @@ void PlannerTask(void *pvParameters){
       distanceOld = distanceCurrent;
     }        
 
-    vTaskDelayUntil(&lastWake, 100 / portTICK_RATE_MS);
+    vTaskDelayUntil(&lastWake, 10 / portTICK_RATE_MS);
   }
 }
 
