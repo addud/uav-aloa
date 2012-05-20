@@ -260,7 +260,7 @@ static int16_t throttlePPM;
 
     if((altitudeHold > 390) && ((positionHold > -20) && (positionHold < 20)) && (autoLanding > 390))
     {
-      throttlePPM = getGas();
+      //throttlePPM = getGas();
   
       distanceCurrent = distanceAverage; //use mutex
   
@@ -269,15 +269,20 @@ static int16_t throttlePPM;
   
       throttleDiff = Kp * distanceP + Kd * distanceD / Tsample;
   
-      throttlePPM -= (int16_t)throttleDiff;
+      //throttlePPM -= (int16_t)throttleDiff;
   
       // set new throttle value
-      setGas(throttlePPM);
+      //setGas(throttlePPM);
+      setGas((-1)*(int16_t)throttleDiff);
   
       distanceOld = distanceCurrent;
+    }
+    else
+    {
+      setGas(0);
     }        
 
-    vTaskDelayUntil(&lastWake, 10 / portTICK_RATE_MS);
+    vTaskDelayUntil(&lastWake, 50 / portTICK_RATE_MS);
   }
 }
 
