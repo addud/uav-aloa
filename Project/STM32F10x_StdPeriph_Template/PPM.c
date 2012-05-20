@@ -1,6 +1,4 @@
 
-#include <stdlib.h>
-#include <stdbool.h>
 #include "PPM.h"
 
 
@@ -12,14 +10,14 @@
 #define CH_ROLL		1
 #define CH_GAS		2
 #define CH_YAW		3
-#define CH_POTI1	4 //SW2
+#define CH_POTI1	4 //SW2	- 2 positions
 #define CH_POTI2	5	//CTRL10
-#define CH_POTI3	6	//CTRL6
-#define CH_POTI4 	7	//SW3
-#define CH_POTI5	8	//CTRL9
-#define CH_POTI6	9	//SW8
+#define CH_POTI3	6	//CTRL6	- 3 positions
+#define CH_POTI4 	7	//SW3	- 2 positions
+#define CH_POTI5	8	//CTRL9	- 3 positions
+#define CH_POTI6	9	//SW8	- 2 positions
 #define CH_POTI7	10 //CTRL7
-#define CH_POTI8 	11 //SW9
+#define CH_POTI8 	11 //SW9 - 2 positions
 
 //PPM measured pulse period values
 #define PPM_LOW										520 //low period of each data pulse
@@ -33,6 +31,8 @@
 #define PPM_MAX_SYNCH							(PPM_PERIOD - PPM_LOW - MAX_CHANNELS * PPM_MIN_PULSE) //maximum length of the synch period
 #define PPM_PULSE_HYSTERESIS			200
 
+
+
 //PPM pulse level
 #define PULSE_HIGH								true
 #define PULSE_LOW									false
@@ -45,6 +45,12 @@ void GPIO_Configuration_PPM(void);
 void NVIC_Configuration_PPM(void);
 void TIM_Configuration_PPM(void);
 
+bool PPMIsResetWD(void);
+bool PPMIsSetWD(void);
+void PPMSetWD(void);
+void PPMResetWD(void);
+
+
 TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
 TIM_ICInitTypeDef  TIM_ICInitStructure;
 TIM_OCInitTypeDef  TIM_OCInitStructure;
@@ -54,6 +60,7 @@ RCC_ClocksTypeDef RCC_ClockFreq;
 
 // The channel array is 0-based!
 volatile int16_t PPM_in[MAX_CHANNELS], PPM_diff[MAX_CHANNELS], PPM_out[MAX_CHANNELS] =  {-400, -400, 400, 400, 0, 0, 123, -123, -400, -400, 400, 400};
+volatile bool PPM_wd = false;
 
 void initPPM(void) {
 	   /* System Clocks Configuration */
@@ -77,7 +84,7 @@ void initPPM(void) {
   */
 void RCC_Configuration_PPM(void)
 {
-  /* TIM3 clock enable */
+ 	/* Enable timer clocks */
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 
@@ -120,6 +127,13 @@ void NVIC_Configuration_PPM(void)
 {
   NVIC_InitTypeDef NVIC_InitStructure;
 
+  /* Enable the TIM2 global Interrupt */
+  NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init( &NVIC_InitStructure ); 
+
   /* Enable the TIM3 global Interrupt */
   NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
@@ -135,13 +149,33 @@ void NVIC_Configuration_PPM(void)
   ------------------------------------------------------------ */
 void TIM_Configuration_PPM(void) {
 
-  TIM_DeInit( TIM3 );
+	/******** Initialize TIM2 **********/
+
+  TIM_DeInit( TIM2 );
+	
+  TIM_TimeBaseStructInit( &TIM_TimeBaseStructure );
+
+  /* Configuration of timer 2. This timer will generate an
+     overflow/update interrupt (TIM2_IRQChannel) every 30ms */
+  TIM_TimeBaseStructure.TIM_Period = 29999;
+  TIM_TimeBaseStructure.TIM_Prescaler = 71; ////prescale to get 1 tick/us
+  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+  TIM_TimeBaseInit( TIM2, &TIM_TimeBaseStructure );
+
+	TIM_ARRPreloadConfig( TIM2, ENABLE );
+
+	TIM_ITConfig( TIM2, TIM_IT_Update, ENABLE );
+
+	TIM_Cmd( TIM2, ENABLE );
+  
+	/******** Initialize TIM3 **********/
+
+	TIM_DeInit( TIM3 );
 
 	//config TIM3 timebase
   TIM_TimeBaseStructure.TIM_Period = ( 0xFFFF );
   TIM_TimeBaseStructure.TIM_Prescaler = 71;	//prescale to get 1 tick/us
   TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-
   TIM_TimeBaseInit( TIM3, &TIM_TimeBaseStructure );
 
 	/* Input Compare configuration: Channel2 */
@@ -151,7 +185,6 @@ void TIM_Configuration_PPM(void) {
   TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
   TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
   TIM_ICInitStructure.TIM_ICFilter = 0x0;
-
   TIM_ICInit(TIM3, &TIM_ICInitStructure);
 
 
@@ -161,7 +194,6 @@ void TIM_Configuration_PPM(void) {
   TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
   TIM_OCInitStructure.TIM_Pulse = 1000;
   TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
-
   TIM_OC1Init(TIM3, &TIM_OCInitStructure);
 
 	//disable preloading for the CC register
@@ -176,6 +208,14 @@ void TIM_Configuration_PPM(void) {
   TIM_Cmd(TIM3, ENABLE);
 }
 
+void TIM2_IRQHandler(void)
+{
+	PPMSetWD();
+	
+	// Clear pending-bit of interrupt
+  TIM_ClearITPendingBit( TIM2, TIM_IT_Update );
+
+}
 /********************************************************************/
 /*         Every time a positive edge is detected at PD6            */
 /********************************************************************/
@@ -250,69 +290,103 @@ void TIM3_IRQHandler(void)
 	      } 
 	    }
 	  }
+		
+		PPMResetWD();
+
   }	else if(TIM_GetITStatus(TIM3, TIM_IT_CC1) == SET) {
     /* Clear TIM2 Capture compare interrupt pending bit */
     TIM_ClearITPendingBit(TIM3, TIM_IT_CC1);
 
 		compare = TIM_GetCapture1(TIM3);
 
-		//if the low period
-		if (pulse == PULSE_LOW) {
-			compare += PPM_LOW;
-			elapsedTime += PPM_LOW; 
-			pulse = PULSE_HIGH;
-		}	else {
-			//if we've forwarded all the channels
-		 	if (index_out == MAX_CHANNELS) {
-				compare += PPM_PERIOD - elapsedTime;
-				elapsedTime = 0;
-				index_out = 0;
-				 
-			} else {
-				//if the value must be updated with our value
-				if (PPM_out[index_out])	{
-					compare += PPM_out[index_out] + PPM_NEUTRAL_HIGH;
-					elapsedTime += PPM_out[index_out] + PPM_NEUTRAL_HIGH;
+		if (!PPMIsSetWD()) {		
 
+			//if the low period
+			if (pulse == PULSE_LOW) {
+				compare += PPM_LOW;
+				elapsedTime += PPM_LOW; 
+				pulse = PULSE_HIGH;
+			}	else {
+				//if we've forwarded all the channels
+			 	if (index_out == MAX_CHANNELS) {
+					compare += PPM_PERIOD - elapsedTime;
+					elapsedTime = 0;
+					index_out = 0;
+					 
 				} else {
-
-					PPM_out[index_out] = PPM_in[index_out] + PPM_diff[index_out] + PPM_NEUTRAL_HIGH;
-
-					if (PPM_out[index_out] < PPM_MIN_HIGH) {
-						PPM_out[index_out] = PPM_MIN_HIGH;
-					} else if (PPM_out[index_out] > PPM_MAX_HIGH) {
-						PPM_out[index_out] = PPM_MAX_HIGH;
+					//if the value must be updated with our value
+					if (PPM_out[index_out])	{
+						compare += PPM_out[index_out] + PPM_NEUTRAL_HIGH;
+						elapsedTime += PPM_out[index_out] + PPM_NEUTRAL_HIGH;
+	
+						/* Once set, the new PPM difference is applied every time 
+						To stop sending it, it must be cleared manually (set to 0) */
+	
+	//					PPM_out[index_out] = 0;
+	
+					} else {
+						compare += PPM_in[index_out] + PPM_NEUTRAL_HIGH;
+						elapsedTime += PPM_in[index_out] + PPM_NEUTRAL_HIGH;
 					}
-					compare += PPM_out[index_out];
-					elapsedTime += PPM_out[index_out];
-
-					/* Once set, the new PPM difference is applied every time 
-					To stop sending it, it must be cleared manually (set to 0) */
-//					PPM_diff[index_out] = 0;
-
+					index_out++;
 				}
-				index_out++;
+				pulse = PULSE_LOW;
 			}
-			pulse = PULSE_LOW;
+		} else {
+			compare += PPM_PERIOD;	
 		}
-
 		TIM_SetCompare1(TIM3, compare);
 	}
+}
+											
+bool PPMIsSetWD() {
+	return (PPM_wd == true);
+}
+
+void PPMSetWD() {
+	PPM_wd = true;
+}
+
+void PPMResetWD() {
+	TIM_SetCounter(TIM2, 0);
+	PPM_wd = false;
 }
 
 //set a value to a given channel
 void setChannel(uint8_t channel, int16_t value) {
 
-//	value += PPM_NEUTRAL_HIGH; 
+	value += PPM_NEUTRAL_HIGH; 
 
-//	if (value < PPM_MIN_HIGH - PPM_NEUTRAL_HIGH) {
-//		value = PPM_MIN_HIGH;
-//	} else if (value > PPM_MAX_HIGH  - PPM_NEUTRAL_HIGH) {
-//		value = PPM_MAX_HIGH;
-//	}
+	if (value < PPM_MIN_HIGH - PPM_NEUTRAL_HIGH) {
+		value = PPM_MIN_HIGH;
+	} else if (value > PPM_MAX_HIGH  - PPM_NEUTRAL_HIGH) {
+		value = PPM_MAX_HIGH;
+	}
 
-	PPM_diff[channel] = value;
+	PPM_out[channel] = value;
 }
+
+ppm_switch_values_t getSwitchValue(int16_t value) {
+	if (value >= PPM_MAX_VALUE - PPM_SWITCH_VALUE_JITTER) {
+		return SW_ON;
+	} else if (value <= PPM_MIN_VALUE + PPM_SWITCH_VALUE_JITTER) {
+	 	return SW_OFF;
+	}	else if ((value <= PPM_NEUTRAL_VALUE + PPM_SWITCH_VALUE_JITTER) && (value >= PPM_NEUTRAL_VALUE - PPM_SWITCH_VALUE_JITTER)) {
+		return SW_NEUTRAL;
+	} else {
+	 	return SW_UNKNOWN;
+	}
+} 
+
+void setSwitchValue(uint8_t channel, ppm_switch_values_t value) {
+	if (value == SW_ON) {
+		setChannel(channel, PPM_MAX_VALUE); 	
+	}	else if (value == SW_OFF) {
+		setChannel(channel, PPM_MIN_VALUE); 	
+	}	else if (value == SW_NEUTRAL) {
+		setChannel(channel, PPM_NEUTRAL_VALUE); 	
+	}
+} 
 
 int16_t getNick() {
 	return PPM_in[CH_NICK];
@@ -326,29 +400,29 @@ int16_t getGas() {
 int16_t getYaw() {
 	return PPM_in[CH_YAW];
 }
-int16_t getPoti1() {
-	return PPM_in[CH_POTI1];
+ppm_switch_values_t getPoti1() {
+	return getSwitchValue(PPM_in[CH_POTI1]);
 }
 int16_t getPoti2() {
 	return PPM_in[CH_POTI2];
 }
-int16_t getPoti3() {
-	return PPM_in[CH_POTI3];
+ppm_switch_values_t getPoti3() {
+	return getSwitchValue(PPM_in[CH_POTI3]);
 }
-int16_t getPoti4() {
-	return PPM_in[CH_POTI4];
+ppm_switch_values_t getPoti4() {
+	return getSwitchValue(PPM_in[CH_POTI4]);
 }
-int16_t getPoti5() {
-	return PPM_in[CH_POTI5];
+ppm_switch_values_t getPoti5() {
+	return getSwitchValue(PPM_in[CH_POTI5]);
 }
-int16_t getPoti6() {
-	return PPM_in[CH_POTI6];
+ppm_switch_values_t getPoti6() {
+	return getSwitchValue(PPM_in[CH_POTI6]);
 }
 int16_t getPoti7() {
 	return PPM_in[CH_POTI7];
 }
-int16_t getPoti8() {
-	return PPM_in[CH_POTI8];
+ppm_switch_values_t getPoti8() {
+	return getSwitchValue(PPM_in[CH_POTI8]);
 }
 
 /* Once set, the new PPM difference is applied every time 
@@ -365,28 +439,28 @@ void setGas(int16_t value) {
 void setYaw(int16_t value) {
 	setChannel(CH_YAW,value);
 }
-void setPoti1(int16_t value) {
-	setChannel(CH_POTI1,value);
+void setPoti1(ppm_switch_values_t value) {
+	setSwitchValue(CH_POTI1,value);
 }
 void setPoti2(int16_t value) {
 	setChannel(CH_POTI2,value);
 }
-void setPoti3(int16_t value) {
-	setChannel(CH_POTI3,value);
+void setPoti3(ppm_switch_values_t value) {
+	setSwitchValue(CH_POTI3,value);
 }
-void setPoti4(int16_t value) {
-	setChannel(CH_POTI4,value);
+void setPoti4(ppm_switch_values_t value) {
+	setSwitchValue(CH_POTI4,value);
 }
-void setPoti5(int16_t value) {
-	setChannel(CH_POTI5,value);
+void setPoti5(ppm_switch_values_t value) {
+	setSwitchValue(CH_POTI5,value);
 }
-void setPoti6(int16_t value) {
-	setChannel(CH_POTI6,value);
+void setPoti6(ppm_switch_values_t value) {
+	setSwitchValue(CH_POTI6,value);
 }
 void setPoti7(int16_t value) {
 	setChannel(CH_POTI7,value);
 }
-void setPoti8(int16_t value) {
-	setChannel(CH_POTI8,value);
+void setPoti8(ppm_switch_values_t value) {
+	setSwitchValue(CH_POTI8,value);
 }
 
