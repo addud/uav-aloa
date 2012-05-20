@@ -168,6 +168,7 @@ void OATask(void *pvParameters)
 	uint16_t data;
 	char array[10] = {0};
 	uint8_t inertial_timeout = 0;
+  portTickType lastWake = xTaskGetTickCount();
 
 	I2CInit();
 
@@ -207,14 +208,15 @@ void OATask(void *pvParameters)
 
 		} else {
 			setNick(PPM_NEUTRAL_VALUE);
+      vTaskDelayUntil(&lastWake, 10 / portTICK_RATE_MS);
 		}
   }
-
+  
 }
 
 void DataTask(void *pvParameters)
 {
- ADC_InitTypeDef ADC_InitStructure;
+  ADC_InitTypeDef ADC_InitStructure;
   portTickType lastWake = xTaskGetTickCount();
   uint8_t i = 0;
   uint16_t distances[4];
@@ -417,9 +419,9 @@ int main(void)
   //xTaskCreate( MyTask, ( signed portCHAR * ) "MyTask", configMINIMAL_STACK_SIZE, (void*)NULL, 2, NULL );
   //xTaskCreate( AddTask, ( signed portCHAR * ) "AddTask", configMINIMAL_STACK_SIZE, (void*)NULL, 2, NULL );
 
-  xTaskCreate( DataTask, ( signed portCHAR * ) "DataTask", configMINIMAL_STACK_SIZE+64, (void*)NULL, 2, NULL );
+  xTaskCreate( DataTask, ( signed portCHAR * ) "DataTask", configMINIMAL_STACK_SIZE+64, (void*)NULL, 4, NULL );
   xTaskCreate( PlannerTask, ( signed portCHAR * ) "PlannerTask", configMINIMAL_STACK_SIZE+128, (void*)NULL, 3, NULL );
-  xTaskCreate( OATask, ( signed portCHAR * ) "ObstacleAvoidanceTask", configMINIMAL_STACK_SIZE, (void*)NULL, 1, NULL );
+  xTaskCreate( OATask, ( signed portCHAR * ) "ObstacleAvoidanceTask", configMINIMAL_STACK_SIZE, (void*)NULL, 5, NULL );
   
   /* Start the scheduler. */
   vTaskStartScheduler();
