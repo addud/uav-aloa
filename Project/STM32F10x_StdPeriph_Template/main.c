@@ -96,7 +96,7 @@
 
 
 #define OUT_OF_RANGE        160//0xFFFF
-#define Kp                  1
+#define Kp                  0.5
 #define Kd                  5
 #define Tsample             (50 / portTICK_RATE_MS)
 
@@ -350,7 +350,7 @@ static int16_t throttlePPM;
       if(distanceCurrent < 30)
       {
         setGas(PPM_MIN_VALUE);
-        setYaw(PPM_MIN_VALUE);
+        setYaw(PPM_MAX_VALUE);
       }
     }
     else
