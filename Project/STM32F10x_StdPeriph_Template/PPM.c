@@ -275,13 +275,11 @@ void TIM3_IRQHandler(void)
 	    if (index_in < MAX_CHANNELS) { // PPM24 supports 12 channels
 	      // check for valid signal length
 	      if ((signal > PPM_MIN_PULSE - PPM_PULSE_HYSTERESIS) && (signal < PPM_MAX_PULSE + PPM_PULSE_HYSTERESIS)) {
-					// update channel value
-//					if ((PPM_in[index_in] - signal > 10) || (PPM_in[index_in] - signal < -10))	 {
-
+					
+						// update channel value
 						//value goes between -400 and 400
 		        PPM_in[index_in] = signal - PPM_LOW - PPM_NEUTRAL_HIGH; 	// offset of 1.52 ms
 						
-//					}
 					index_in++;
 	      } 
 	    }
