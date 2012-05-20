@@ -88,9 +88,11 @@ void I2CInit(void)
 }
 
 
-uint16_t I2Ctimeout() {
-	 return 1;
+uint16_t I2Ctimeout(uint16_t I2C_error) {
+	 I2CInit();
+	 return I2C_error;
 }
+
 
 uint16_t I2CSendCommand(uint8_t device_address, uint8_t command_address, uint8_t command)
 { 
@@ -100,7 +102,7 @@ uint16_t I2CSendCommand(uint8_t device_address, uint8_t command_address, uint8_t
   timeout = I2C_TIMEOUT;
   while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY))
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_TX_FLAG_BUSY_TIMEOUT);
   }
 
 	//1. Send a start sequence
@@ -112,7 +114,7 @@ uint16_t I2CSendCommand(uint8_t device_address, uint8_t command_address, uint8_t
   timeout = I2C_TIMEOUT;
   while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT))
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_TX_MASTER_MODE_TIMEOUT);
   }
 
 	//2. Send 0xE0 ( I2C address of the SRF02 with the R/W bit low (even address - write))
@@ -125,14 +127,14 @@ uint16_t I2CSendCommand(uint8_t device_address, uint8_t command_address, uint8_t
   timeout = I2C_TIMEOUT;
   while(I2C_GetFlagStatus(I2C1, I2C_FLAG_ADDR) == RESET)
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_TX_FLAG_ADDR_TIMEOUT);
   } 
 
   /*!< Test on EV6 and clear it */
   timeout = I2C_TIMEOUT;
   while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED))
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_TX_MASTER_TRANSMITTER_TIMEOUT);
   }
 
 	//3. Send 0x00 (Internal address of the command register)
@@ -144,7 +146,7 @@ uint16_t I2CSendCommand(uint8_t device_address, uint8_t command_address, uint8_t
   timeout = I2C_TIMEOUT;  
   while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED))
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_TX_BYTE_TRANSMITTED_TIMEOUT);
   } 
 
 	//4. Send 0x51 (The command to start the SRF02 ranging in cm)
@@ -156,7 +158,7 @@ uint16_t I2CSendCommand(uint8_t device_address, uint8_t command_address, uint8_t
   timeout = I2C_TIMEOUT;  
   while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED))
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_TX_BYTE_TRANSMITTED_TIMEOUT);
   } 
 
 	//5. Send the stop sequence.
@@ -168,7 +170,7 @@ uint16_t I2CSendCommand(uint8_t device_address, uint8_t command_address, uint8_t
   timeout = I2C_TIMEOUT;
   while(I2C1->CR1 & I2C_CR1_STOP)
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_TX_CLEAR_STOP_TIMEOUT);
   }  
 
   /* If all operations OK, return OK */
@@ -184,7 +186,7 @@ uint16_t I2CReadData(uint8_t device_address, uint8_t register_address) {
   timeout = I2C_TIMEOUT;
   while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY))
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_RX_FLAG_BUSY_TIMEOUT);
   }
 
 	//1. Send a start sequence
@@ -196,7 +198,7 @@ uint16_t I2CReadData(uint8_t device_address, uint8_t register_address) {
   timeout = I2C_TIMEOUT;
   while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT))
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_RX_MASTER_MODE_TIMEOUT);
   }
 
 	//2. Send 0xE0 ( I2C address of the SRF02 with the R/W bit low (even address - write)) 
@@ -209,14 +211,14 @@ uint16_t I2CReadData(uint8_t device_address, uint8_t register_address) {
   timeout = I2C_TIMEOUT;
   while(I2C_GetFlagStatus(I2C1, I2C_FLAG_ADDR) == RESET)
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_RX_FLAG_ADDR_TIMEOUT);
   } 
 
   /*!< Test on EV6 and clear it */
   timeout = I2C_TIMEOUT;
   while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED))
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_RX_MASTER_TRANSMITTER_TIMEOUT);
   }
 
 	//3. Send 0x02 (Internal address of the first distance register)
@@ -228,7 +230,7 @@ uint16_t I2CReadData(uint8_t device_address, uint8_t register_address) {
   timeout = I2C_TIMEOUT;  
   while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED))
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_RX_BYTE_TRANSMITTED_TIMEOUT);
   } 
 
 	I2C_NACKPositionConfig(I2C1, I2C_NACKPosition_Next);
@@ -242,7 +244,7 @@ uint16_t I2CReadData(uint8_t device_address, uint8_t register_address) {
   timeout = I2C_TIMEOUT;
   while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT))
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_RX_MASTER_MODE_TIMEOUT);
   }
   
 	//5. Send 0xE1 ( I2C address of the SRF02 with the R/W bit high (odd address - read))
@@ -254,7 +256,7 @@ uint16_t I2CReadData(uint8_t device_address, uint8_t register_address) {
   timeout = I2C_TIMEOUT;
   while(I2C_GetFlagStatus(I2C1, I2C_FLAG_ADDR) == RESET)
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_RX_FLAG_ADDR_TIMEOUT);
   }  
 
   /* Call User callback for critical section start (should typically disable interrupts) */
@@ -271,7 +273,7 @@ uint16_t I2CReadData(uint8_t device_address, uint8_t register_address) {
  
 	while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BTF) == RESET)
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_RX_FLAG_BTF_TIMEOUT);
   }
 
 	//6. Read the two data bytes, high and low from SRF02
@@ -280,7 +282,7 @@ uint16_t I2CReadData(uint8_t device_address, uint8_t register_address) {
   timeout = I2C_TIMEOUT;
   while(I2C_GetFlagStatus(I2C1, I2C_FLAG_RXNE) == RESET)
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_RX_FLAG_RXNE_TIMEOUT);
   }
   
   /*!< Read first data byte from sonar  */
@@ -290,7 +292,7 @@ uint16_t I2CReadData(uint8_t device_address, uint8_t register_address) {
   timeout = I2C_TIMEOUT;
   while(I2C_GetFlagStatus(I2C1, I2C_FLAG_RXNE) == RESET)
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_RX_FLAG_RXNE_TIMEOUT);
   }
   
   /*!< Read second data byte from sonar */
@@ -310,7 +312,7 @@ uint16_t I2CReadData(uint8_t device_address, uint8_t register_address) {
   timeout = I2C_TIMEOUT;
   while(I2C1->CR1 & I2C_CR1_STOP)
   {
-//    if((timeout--) == 0) return I2Ctimeout();
+    if((timeout--) == 0) return I2Ctimeout(I2C_RX_CLEAR_STOP_TIMEOUT);
   }  
   
   /*!< Re-Enable Acknowledgement to be ready for another reception */
