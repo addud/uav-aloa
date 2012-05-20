@@ -338,7 +338,7 @@ static int16_t throttlePPM;
   
       distanceOld = distanceCurrent;
 
-      if(distanceCurrent < 25)
+      if(distanceCurrent < 30)
       {
         setGas(PPM_MIN_VALUE);
         setYaw(PPM_MIN_VALUE);
@@ -347,6 +347,7 @@ static int16_t throttlePPM;
     else
     {
       setGas(PPM_NEUTRAL_VALUE);
+      setYaw(PPM_NEUTRAL_VALUE);
     }        
 
     vTaskDelayUntil(&lastWake, 50 / portTICK_RATE_MS);
