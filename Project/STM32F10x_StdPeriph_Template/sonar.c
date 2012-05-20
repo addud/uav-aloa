@@ -22,6 +22,7 @@
 #define MEDIAN_FLTER_LENGTH				5
 
 #define OBSTACLE_RANGE						500 //in cm
+#define NO_OBSTACLE								0
 
 
 uint16_t SonarApplyMedianFilter(uint8_t sonar, uint16_t data);
@@ -32,7 +33,7 @@ const uint8_t sonar_address_lookup[NUMBER_OF_SONARS] = {ADRR_FRONT_SONAR};
 static uint16_t median_filter[NUMBER_OF_SONARS][MEDIAN_FLTER_LENGTH] = {100, 100, 100, 100, 100};
 
 bool SonarIsObstacle(uint16_t data) {	
-	if (data < OBSTACLE_RANGE) {
+	if (data != NO_OBSTACLE) {
 		return true;
 	} else {
 		return false;

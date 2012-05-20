@@ -100,11 +100,11 @@
 #define Kd                  5
 #define Tsample             (50 / portTICK_RATE_MS)
 
-#define OA_NICK_GAIN					25
-#define OA_GAS_GAIN						25
-#define OA_ROLL_GAIN					25
+#define OA_NICK_GAIN					55
+#define OA_GAS_GAIN						50
+#define OA_ROLL_GAIN					65
 
-#define OA_INERTIAL_TIMEOUT		30
+#define OA_INERTIAL_TIMEOUT		15
 
 volatile uint16_t readVoltage = 0;
 volatile uint16_t distanceCm = 0;
@@ -189,7 +189,7 @@ void OATask(void *pvParameters)
 			
 			} else {
 	
-				data = MedianFilter(data);
+//				data = MedianFilter(data);
 	
 				if (SonarIsObstacle(data) || (getPoti8() ==  SW_ON)) {
 	
