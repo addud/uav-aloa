@@ -21,7 +21,7 @@
 
 #define MEDIAN_FLTER_LENGTH				5
 
-#define OBSTACLE_RANGE						200 //in cm
+#define OBSTACLE_RANGE						500 //in cm
 
 
 uint16_t SonarApplyMedianFilter(uint8_t sonar, uint16_t data);

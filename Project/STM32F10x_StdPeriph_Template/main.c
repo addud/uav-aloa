@@ -24,6 +24,10 @@
 #include "stm32_eval.h"
 #include <stdio.h>
 #include "PPM.h"
+#include "I2C.h"
+#include "sonar.h"
+#include "filter.h"
+
 
 #ifdef USE_STM32100B_EVAL
  #include "stm32100b_eval_lcd.h"
@@ -91,10 +95,15 @@
 #endif /* __GNUC__ */
 
 
-#define OUT_OF_RANGE        160 //0xFFFF
+#define OUT_OF_RANGE        0xFFFF
 #define Kp                  1//0.1
 #define Kd                  0
 #define Tsample             (50 / portTICK_RATE_MS)
+
+#define OA_NICK_GAIN					50
+#define OA_GAS_GAIN						50
+#define OA_ROLL_GAIN					50
+#define OA_INERTIAL_TIMEOUT		30
 
 volatile uint16_t readVoltage = 0;
 volatile uint16_t distanceCm = 0;
@@ -103,7 +112,8 @@ volatile uint16_t distanceCurrent = 0;
 volatile uint16_t distanceOld = 0;
 volatile uint16_t throttleDiff = 0;
 
-ppm_switch_values_t altitudeHold = SW_UNKNOWN, positionHold = SW_UNKNOWN, autoLanding = SW_UNKNOWN;
+int16_t altitudeHold = 0, positionHold = 0;
+int16_t autoLanding = 0;
 
 /* Private functions ---------------------------------------------------------*/
 void MyTask(void *pvParameters)
@@ -151,6 +161,55 @@ void RCC_Configuration_ADC(void)
 
   /* Enable ADC1 and GPIOC clock */
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_GPIOC, ENABLE);
+}
+
+void OATask(void *pvParameters)
+{
+	uint16_t data;
+	char array[10] = {0};
+	uint8_t inertial_timeout = 0;
+
+	I2CInit();
+
+	for(;;) {
+//		if (true) {
+		if (getPoti5() == SW_ON) {
+			
+			SonarStartRanging(FRONT_SONAR);
+			
+	    vTaskDelay(SONAR_RESPONSE_DELAY / portTICK_RATE_MS);
+	
+			data = MedianFilter(SonarReadData(FRONT_SONAR));
+
+			if (SonarIsObstacle(data)) {
+
+				inertial_timeout = OA_INERTIAL_TIMEOUT;
+				
+			} 
+			
+			if (inertial_timeout > 0) {
+
+				setNick(PPM_NEUTRAL_VALUE);
+//				setGas(getGas() + OA_GAS_GAIN);	
+				setRoll(getRoll() + OA_ROLL_GAIN);
+							
+				inertial_timeout--;
+
+			} else {
+
+				setNick(getNick() + OA_NICK_GAIN);
+
+			}
+	
+			sprintf(array, "%d", data);
+			LCD_DisplayStringLine(LCD_LINE_2, "           ");
+			LCD_DisplayStringLine(LCD_LINE_2, (uint8_t *)array);
+
+		} else {
+			setNick(PPM_NEUTRAL_VALUE);
+		}
+  }
+
 }
 
 void DataTask(void *pvParameters)
@@ -257,7 +316,7 @@ static int16_t throttlePPM;
     positionHold = getPoti2();
     autoLanding = getPoti6();
 
-    if((altitudeHold == SW_ON) && (positionHold == SW_NEUTRAL) && (autoLanding == SW_ON))
+    if((altitudeHold > 390) && ((positionHold > -20) && (positionHold < 20)) && (autoLanding > 390))
     {
       //throttlePPM = getGas();
   
@@ -292,12 +351,31 @@ static int16_t throttlePPM;
   */
 int main(void)
 {
-  /*!< At this stage the microcontroller clock setting is already configured, 
-       this is done through SystemInit() function which is called from startup
-       file (startup_stm32f10x_xx.s) before to branch to application main.
-       To reconfigure the default setting of SystemInit() function, refer to
-       system_stm32f10x.c file
-     */     
+
+ /* Initialize the LCD */
+#ifdef USE_STM32100B_EVAL
+  STM32100B_LCD_Init();
+#elif defined (USE_STM3210B_EVAL)
+  STM3210B_LCD_Init();
+#elif defined (USE_STM3210E_EVAL)
+  STM3210E_LCD_Init();
+#elif defined (USE_STM3210C_EVAL)
+  STM3210C_LCD_Init();
+#elif defined (USE_STM32100E_EVAL)
+  STM32100E_LCD_Init();  
+#endif
+
+  /* Display message on STM3210X-EVAL LCD *************************************/
+  /* Clear the LCD */ 
+  LCD_Clear(LCD_COLOR_WHITE);
+
+  /* Set the LCD Back Color */
+  LCD_SetBackColor(LCD_COLOR_BLUE);
+  /* Set the LCD Text Color */
+  LCD_SetTextColor(LCD_COLOR_WHITE);
+//  LCD_DisplayStringLine(LCD_LINE_0, (uint8_t *)MESSAGE1);
+//  LCD_DisplayStringLine(LCD_LINE_1, (uint8_t *)MESSAGE2);
+  LCD_DisplayStringLine(LCD_LINE_2, (uint8_t *)MESSAGE3);   
 
 //
 //  /* USARTx configured as follow:
@@ -332,9 +410,9 @@ int main(void)
   //xTaskCreate( MyTask, ( signed portCHAR * ) "MyTask", configMINIMAL_STACK_SIZE, (void*)NULL, 2, NULL );
   //xTaskCreate( AddTask, ( signed portCHAR * ) "AddTask", configMINIMAL_STACK_SIZE, (void*)NULL, 2, NULL );
 
-  xTaskCreate( DataTask, ( signed portCHAR * ) "DataTask", configMINIMAL_STACK_SIZE+64, (void*)NULL, 5, NULL );
-  xTaskCreate( PlannerTask, ( signed portCHAR * ) "PlannerTask", configMINIMAL_STACK_SIZE+128, (void*)NULL, 2, NULL );
-  
+  xTaskCreate( DataTask, ( signed portCHAR * ) "DataTask", configMINIMAL_STACK_SIZE+64, (void*)NULL, 2, NULL );
+  xTaskCreate( PlannerTask, ( signed portCHAR * ) "PlannerTask", configMINIMAL_STACK_SIZE+128, (void*)NULL, 3, NULL );
+  xTaskCreate( OATask, ( signed portCHAR * ) "ObstacleAvoidanceTask", configMINIMAL_STACK_SIZE, (void*)NULL, 1, NULL );
   
   /* Start the scheduler. */
   vTaskStartScheduler();

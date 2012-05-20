@@ -4,7 +4,8 @@
 #include "stm32f10x.h"
 #include <stdbool.h>
 
-#define FRONT_SONAR					0
+#define FRONT_SONAR							0
+#define SONAR_RESPONSE_DELAY		70
 
 bool SonarIsObstacle(uint16_t data);
 

@@ -3,8 +3,11 @@
 #include "I2C.h"
 
 #define I2C_SPEED               300000
-
 #define I2C_TIMEOUT							0x1000
+
+/* Uncomment this define to remap the I2C pins from SCK -- PB6, SDA -- PB7 to 
+	 alternate function pins SCL -- PB8,  SDA -- PB9 	*/
+//#define I2C_REMAP
 
 /*
 To start a measurement a write command:
@@ -31,35 +34,55 @@ void I2CInit(void)
 { 
   I2C_InitTypeDef  I2C_InitStructure;
   GPIO_InitTypeDef  GPIO_InitStructure;
+
+	#ifdef I2C_REMAP
     
-  /*!< sEE_I2C_SCL_GPIO_CLK and sEE_I2C_SDA_GPIO_CLK Periph clock enable */
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO | RCC_APB2Periph_GPIOB,ENABLE);
+
+	#else
+
+  /*!< I2C_SCL_GPIO_CLK and I2C_SDA_GPIO_CLK Periph clock enable */
   RCC_APB2PeriphClockCmd(RCC_APB1Periph_I2C1 | RCC_APB2Periph_GPIOB, ENABLE);
 
-  /*!< sEE_I2C Periph clock enable */
+	#endif
+
+  /*!< I2C Periph clock enable */
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
+
     
-  /*!< GPIO configuration */  
-  /*!< Configure I2C pins: SDA -- PB6*/
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+  /*!< GPIO configuration */
+
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_OD;
-  GPIO_Init(GPIOB, &GPIO_InitStructure);
 
-  /*!< Configure I2C pins: SDA -- PB7*/
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
-  GPIO_Init(GPIOB, &GPIO_InitStructure);   
-  
+
+	
+	#ifdef I2C_REMAP
+
+	GPIO_PinRemapConfig(GPIO_Remap_I2C1, ENABLE);
+  /*!< Configure I2C pins: SCL -- PB8,  SDA -- PB9*/
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_9;	
+
+	#else
+	  
+  /*!< Configure I2C pins: SCK -- PB6, SDA -- PB7*/
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
+
+	#endif
+
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+//	#endif
+
   /*!< I2C configuration */
-  /* sEE_I2C configuration */
   I2C_InitStructure.I2C_Mode = I2C_Mode_I2C;
   I2C_InitStructure.I2C_DutyCycle = I2C_DutyCycle_2;
   I2C_InitStructure.I2C_Ack = I2C_Ack_Enable;
   I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
   I2C_InitStructure.I2C_ClockSpeed = I2C_SPEED;
   
-  /* sEE_I2C Peripheral Enable */
+  /* I2C Peripheral Enable */
   I2C_Cmd(I2C1, ENABLE);
-  /* Apply sEE_I2C configuration after enabling it */
+  /* Apply I2C configuration after enabling it */
   I2C_Init(I2C1, &I2C_InitStructure);
    
 }
