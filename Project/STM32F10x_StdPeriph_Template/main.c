@@ -49,51 +49,6 @@
 /* Library includes. */
 #include "stm32f10x_it.h"
 
-/** @addtogroup STM32F10x_StdPeriph_Template
-  * @{
-  */
-
-/* Private typedef -----------------------------------------------------------*/
-/* Private define ------------------------------------------------------------*/
-#ifdef USE_STM32100B_EVAL
-  #define MESSAGE1   "STM32 MD Value Line " 
-  #define MESSAGE2   " Device running on  " 
-  #define MESSAGE3   "  STM32100B-EVAL    " 
-#elif defined (USE_STM3210B_EVAL)
-  #define MESSAGE1   "STM32 Medium Density" 
-  #define MESSAGE2   " Device running on  " 
-  #define MESSAGE3   "   STM3210B-EVAL    " 
-#elif defined (STM32F10X_XL) && defined (USE_STM3210E_EVAL)
-  #define MESSAGE1   "  STM32 XL Density  " 
-  #define MESSAGE2   " Device running on  " 
-  #define MESSAGE3   "   STM3210E-EVAL    "
-#elif defined (USE_STM3210E_EVAL)
-  #define MESSAGE1   " STM32 High Density " 
-  #define MESSAGE2   " Device running on  " 
-  #define MESSAGE3   "   STM3210E-EVAL    " 
-#elif defined (USE_STM3210C_EVAL)
-  #define MESSAGE1   " STM32 Connectivity " 
-  #define MESSAGE2   " Line Device running" 
-  #define MESSAGE3   " on STM3210C-EVAL   "
-#elif defined (USE_STM32100E_EVAL)
-  #define MESSAGE1   "STM32 HD Value Line " 
-  #define MESSAGE2   " Device running on  " 
-  #define MESSAGE3   "  STM32100E-EVAL    "   
-#endif
-
-/* Private macro -------------------------------------------------------------*/
-/* Private variables ---------------------------------------------------------*/
- USART_InitTypeDef USART_InitStructure;
-
-/* Private function prototypes -----------------------------------------------*/
-#ifdef __GNUC__
-/* With GCC/RAISONANCE, small printf (option LD Linker->Libraries->Small printf
-   set to 'Yes') calls __io_putchar() */
-#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
-#else
-#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
-#endif /* __GNUC__ */
-
 
 #define OUT_OF_RANGE        160//0xFFFF
 #define Kp                  0.5
@@ -377,53 +332,6 @@ static int16_t throttlePPM;
 int main(void)
 {
 
-// /* Initialize the LCD */
-//#ifdef USE_STM32100B_EVAL
-//  STM32100B_LCD_Init();
-//#elif defined (USE_STM3210B_EVAL)
-//  STM3210B_LCD_Init();
-//#elif defined (USE_STM3210E_EVAL)
-//  STM3210E_LCD_Init();
-//#elif defined (USE_STM3210C_EVAL)
-//  STM3210C_LCD_Init();
-//#elif defined (USE_STM32100E_EVAL)
-//  STM32100E_LCD_Init();  
-//#endif
-
-//  /* Display message on STM3210X-EVAL LCD *************************************/
-//  /* Clear the LCD */ 
-//  LCD_Clear(LCD_COLOR_WHITE);
-//
-//  /* Set the LCD Back Color */
-//  LCD_SetBackColor(LCD_COLOR_BLUE);
-//  /* Set the LCD Text Color */
-//  LCD_SetTextColor(LCD_COLOR_WHITE);
-////  LCD_DisplayStringLine(LCD_LINE_0, (uint8_t *)MESSAGE1);
-////  LCD_DisplayStringLine(LCD_LINE_1, (uint8_t *)MESSAGE2);
-//  LCD_DisplayStringLine(LCD_LINE_2, (uint8_t *)MESSAGE3);   
-
-//
-//  /* USARTx configured as follow:
-//        - BaudRate = 115200 baud  
-//        - Word Length = 8 Bits
-//        - One Stop Bit
-//        - No parity
-//        - Hardware flow control disabled (RTS and CTS signals)
-//        - Receive and transmit enabled
-//  */
-//  USART_InitStructure.USART_BaudRate = 115200;
-//  USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-//  USART_InitStructure.USART_StopBits = USART_StopBits_1;
-//  USART_InitStructure.USART_Parity = USART_Parity_No;
-//  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-//  USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-//
-//  STM_EVAL_COMInit(COM1, &USART_InitStructure);
-
-
-  /* Add your application code here */
-
-
   /*With ST you have to ensure the interrupt priority bits are all set to 
   preemption priority, rather than sub priority, to make your life easier. 
   ST seem to stand out from the crowd by not doing that by default. Using 
@@ -446,24 +354,6 @@ int main(void)
   /* Will only get here if there was not enough heap space to create the
   idle task. */
   return 0;
-}
-
-/**
-  * @brief  Retargets the C library printf function to the USART.
-  * @param  None
-  * @retval None
-  */
-PUTCHAR_PROTOTYPE
-{
-  /* Place your implementation of fputc here */
-  /* e.g. write a character to the USART */
-  //USART_SendData(EVAL_COM1, (uint8_t) ch);
-
-  /* Loop until the end of transmission */
-  //while (USART_GetFlagStatus(EVAL_COM1, USART_FLAG_TC) == RESET)
-  {}
-
-  return ch;
 }
 
 #ifdef  USE_FULL_ASSERT
