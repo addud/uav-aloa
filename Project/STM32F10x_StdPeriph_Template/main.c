@@ -95,9 +95,9 @@
 #endif /* __GNUC__ */
 
 
-#define OUT_OF_RANGE        0xFFFF
-#define Kp                  1//0.1
-#define Kd                  0
+#define OUT_OF_RANGE        160//0xFFFF
+#define Kp                  1
+#define Kd                  5
 #define Tsample             (50 / portTICK_RATE_MS)
 
 #define OA_NICK_GAIN					50
@@ -108,9 +108,9 @@
 volatile uint16_t readVoltage = 0;
 volatile uint16_t distanceCm = 0;
 volatile uint16_t distanceAverage = 0;
-volatile uint16_t distanceCurrent = 0;
-volatile uint16_t distanceOld = 0;
-volatile uint16_t throttleDiff = 0;
+volatile int16_t distanceCurrent = 0;
+volatile int16_t distanceOld = 0;
+volatile int16_t throttleDiff = 0;
 
 int16_t altitudeHold = 0, positionHold = 0;
 int16_t autoLanding = 0;
@@ -202,8 +202,8 @@ void OATask(void *pvParameters)
 			}
 	
 			sprintf(array, "%d", data);
-			LCD_DisplayStringLine(LCD_LINE_2, "           ");
-			LCD_DisplayStringLine(LCD_LINE_2, (uint8_t *)array);
+			//LCD_DisplayStringLine(LCD_LINE_2, "           ");
+			//LCD_DisplayStringLine(LCD_LINE_2, (uint8_t *)array);
 
 		} else {
 			setNick(PPM_NEUTRAL_VALUE);
@@ -300,8 +300,9 @@ void DataTask(void *pvParameters)
 
 void PlannerTask(void *pvParameters){
 
+
   portTickType lastWake = xTaskGetTickCount();
-static uint16_t distanceP, distanceD;
+static int16_t distanceP, distanceD;
 static int16_t throttlePPM;
 
   for(;;){
@@ -316,28 +317,34 @@ static int16_t throttlePPM;
     positionHold = getPoti2();
     autoLanding = getPoti6();
 
-    if((altitudeHold > 390) && ((positionHold > -20) && (positionHold < 20)) && (autoLanding > 390))
+    if((altitudeHold == SW_ON) && (positionHold == SW_NEUTRAL) && (autoLanding == SW_ON))
     {
-      //throttlePPM = getGas();
+      throttlePPM = getGas();
   
-      distanceCurrent = distanceAverage; //use mutex
+      distanceCurrent = (int16_t)distanceAverage; //use mutex
   
       distanceP = distanceCurrent - 0;
       distanceD = distanceOld - distanceCurrent;
   
-      throttleDiff = Kp * distanceP + Kd * distanceD / Tsample;
+      throttleDiff = (Kp * distanceP) - (Kd * distanceD);// / Tsample);
   
-      //throttlePPM -= (int16_t)throttleDiff;
+      throttlePPM -= (int16_t)throttleDiff;
   
       // set new throttle value
-      //setGas(throttlePPM);
-      setGas((-1)*(int16_t)throttleDiff);
+      setGas(throttlePPM);
+      //setGas((-1)*(int16_t)throttleDiff);
   
       distanceOld = distanceCurrent;
+
+      if(distanceCurrent < 25)
+      {
+        setGas(PPM_MIN_VALUE);
+        setYaw(PPM_MIN_VALUE);
+      }
     }
     else
     {
-      setGas(0);
+      setGas(PPM_NEUTRAL_VALUE);
     }        
 
     vTaskDelayUntil(&lastWake, 50 / portTICK_RATE_MS);
@@ -352,30 +359,30 @@ static int16_t throttlePPM;
 int main(void)
 {
 
- /* Initialize the LCD */
-#ifdef USE_STM32100B_EVAL
-  STM32100B_LCD_Init();
-#elif defined (USE_STM3210B_EVAL)
-  STM3210B_LCD_Init();
-#elif defined (USE_STM3210E_EVAL)
-  STM3210E_LCD_Init();
-#elif defined (USE_STM3210C_EVAL)
-  STM3210C_LCD_Init();
-#elif defined (USE_STM32100E_EVAL)
-  STM32100E_LCD_Init();  
-#endif
+// /* Initialize the LCD */
+//#ifdef USE_STM32100B_EVAL
+//  STM32100B_LCD_Init();
+//#elif defined (USE_STM3210B_EVAL)
+//  STM3210B_LCD_Init();
+//#elif defined (USE_STM3210E_EVAL)
+//  STM3210E_LCD_Init();
+//#elif defined (USE_STM3210C_EVAL)
+//  STM3210C_LCD_Init();
+//#elif defined (USE_STM32100E_EVAL)
+//  STM32100E_LCD_Init();  
+//#endif
 
-  /* Display message on STM3210X-EVAL LCD *************************************/
-  /* Clear the LCD */ 
-  LCD_Clear(LCD_COLOR_WHITE);
-
-  /* Set the LCD Back Color */
-  LCD_SetBackColor(LCD_COLOR_BLUE);
-  /* Set the LCD Text Color */
-  LCD_SetTextColor(LCD_COLOR_WHITE);
-//  LCD_DisplayStringLine(LCD_LINE_0, (uint8_t *)MESSAGE1);
-//  LCD_DisplayStringLine(LCD_LINE_1, (uint8_t *)MESSAGE2);
-  LCD_DisplayStringLine(LCD_LINE_2, (uint8_t *)MESSAGE3);   
+//  /* Display message on STM3210X-EVAL LCD *************************************/
+//  /* Clear the LCD */ 
+//  LCD_Clear(LCD_COLOR_WHITE);
+//
+//  /* Set the LCD Back Color */
+//  LCD_SetBackColor(LCD_COLOR_BLUE);
+//  /* Set the LCD Text Color */
+//  LCD_SetTextColor(LCD_COLOR_WHITE);
+////  LCD_DisplayStringLine(LCD_LINE_0, (uint8_t *)MESSAGE1);
+////  LCD_DisplayStringLine(LCD_LINE_1, (uint8_t *)MESSAGE2);
+//  LCD_DisplayStringLine(LCD_LINE_2, (uint8_t *)MESSAGE3);   
 
 //
 //  /* USARTx configured as follow:
