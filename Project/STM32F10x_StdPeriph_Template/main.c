@@ -96,13 +96,13 @@
 
 
 #define OUT_OF_RANGE        160//0xFFFF
-#define Kp                  0.5
-#define Kd                  8
+#define Kp                  0.4
+#define Kd                  5
 #define Tsample             (50 / portTICK_RATE_MS)
 
-#define OA_NICK_GAIN					35
-#define OA_GAS_GAIN						35
-#define OA_ROLL_GAIN					35
+#define OA_NICK_GAIN					25
+#define OA_GAS_GAIN						25
+#define OA_ROLL_GAIN					25
 
 #define OA_INERTIAL_TIMEOUT		30
 
@@ -190,18 +190,12 @@ void OATask(void *pvParameters)
 			} else {
 	
 				data = MedianFilter(data);
-
-				if (getPoti8() ==  SW_ON) {
+	
+				if (SonarIsObstacle(data) || (getPoti8() ==  SW_ON)) {
 	
 					inertial_timeout = OA_INERTIAL_TIMEOUT;
 					
 				} 
-					
-//				if (SonarIsObstacle(data)) { 
-//	
-//					inertial_timeout = OA_INERTIAL_TIMEOUT;
-//					
-//				} 
 				
 				if (inertial_timeout > 0) {
 	
