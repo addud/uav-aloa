@@ -20,10 +20,6 @@
 #define CH_POTI8 	11 //SW9 - 2 positions
 
 //PPM measured pulse period values
-#define PPM_LOW										520 //low period of each data pulse
-#define PPM_MIN_HIGH							600	//minimum high period of a data pulse
-#define PPM_NEUTRAL_HIGH					1000 //neutral high period of a data pulse
-#define PPM_MAX_HIGH							1400 //maximum high period of a data pulse
 #define PPM_MIN_PULSE							(PPM_LOW + PPM_MIN_HIGH) //minimum length of a data pulse
 #define PPM_MAX_PULSE							(PPM_LOW + PPM_MAX_HIGH) //maximum length of a data pulse
 #define PPM_PERIOD								30000 // total period of the PPM signal
