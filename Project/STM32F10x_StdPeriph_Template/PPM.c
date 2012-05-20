@@ -59,7 +59,7 @@ RCC_ClocksTypeDef RCC_ClockFreq;
 
 
 // The channel array is 0-based!
-volatile int16_t PPM_in[MAX_CHANNELS], PPM_diff[MAX_CHANNELS], PPM_out[MAX_CHANNELS] =  {-400, -400, 400, 400, 0, 0, 123, -123, -400, -400, 400, 400};
+volatile int16_t PPM_in[MAX_CHANNELS], PPM_diff[MAX_CHANNELS], PPM_out[MAX_CHANNELS] = {0}; //PPM_out[MAX_CHANNELS] =  {-400, -400, 400, 400, 0, 0, 123, -123, -400, -400, 400, 400};
 volatile bool PPM_wd = false;
 
 void initPPM(void) {
@@ -355,7 +355,7 @@ void PPMResetWD() {
 //set a value to a given channel
 void setChannel(uint8_t channel, int16_t value) {
 
-	value += PPM_NEUTRAL_HIGH; 
+//	value += PPM_NEUTRAL_HIGH; 
 
 	if (value < PPM_MIN_HIGH - PPM_NEUTRAL_HIGH) {
 		value = PPM_MIN_HIGH;
