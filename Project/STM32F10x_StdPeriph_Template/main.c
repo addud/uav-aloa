@@ -100,9 +100,10 @@
 #define Kd                  5
 #define Tsample             (50 / portTICK_RATE_MS)
 
-#define OA_NICK_GAIN					50
-#define OA_GAS_GAIN						50
-#define OA_ROLL_GAIN					50
+#define OA_NICK_GAIN					30
+#define OA_GAS_GAIN						30
+#define OA_ROLL_GAIN					30
+
 #define OA_INERTIAL_TIMEOUT		30
 
 volatile uint16_t readVoltage = 0;
@@ -165,9 +166,8 @@ void RCC_Configuration_ADC(void)
 
 void OATask(void *pvParameters)
 {
-	uint16_t data;
-	char array[10] = {0};
-	uint8_t inertial_timeout = 0;
+	static uint16_t data;
+	static uint8_t inertial_timeout = 0;
   portTickType lastWake = xTaskGetTickCount();
 
 	I2CInit();
@@ -179,35 +179,44 @@ void OATask(void *pvParameters)
 			SonarStartRanging(FRONT_SONAR);
 			
 	    vTaskDelay(SONAR_RESPONSE_DELAY / portTICK_RATE_MS);
-	
-			data = MedianFilter(SonarReadData(FRONT_SONAR));
 
-			if (SonarIsObstacle(data)) {
+			data = SonarReadData(FRONT_SONAR);
 
-				inertial_timeout = OA_INERTIAL_TIMEOUT;
-				
-			} 
+			if (IS_I2C_ERROR(data)) {
+
+				setNick(PPM_NEUTRAL_VALUE);	
+				setRoll(PPM_NEUTRAL_VALUE);
 			
-			if (inertial_timeout > 0) {
-
-				setNick(PPM_NEUTRAL_VALUE);
-//				setGas(getGas() + OA_GAS_GAIN);	
-				setRoll(getRoll() + OA_ROLL_GAIN);
-							
-				inertial_timeout--;
-
 			} else {
-
-				setNick(getNick() + OA_NICK_GAIN);
-
-			}
 	
-			sprintf(array, "%d", data);
-			//LCD_DisplayStringLine(LCD_LINE_2, "           ");
-			//LCD_DisplayStringLine(LCD_LINE_2, (uint8_t *)array);
+				data = MedianFilter(data);
+	
+				if (SonarIsObstacle(data)) {
+	
+					inertial_timeout = OA_INERTIAL_TIMEOUT;
+					
+				} 
+				
+				if (inertial_timeout > 0) {
+	
+					setNick(PPM_NEUTRAL_VALUE);
+	//				setGas(getGas() + OA_GAS_GAIN);	
+					setRoll(getRoll() + OA_ROLL_GAIN);
+								
+					inertial_timeout--;
+	
+				} else {
+	
+					setNick(getNick() + OA_NICK_GAIN);
+					setRoll(PPM_NEUTRAL_VALUE);
+	
+				}
+	
+			}
 
 		} else {
 			setNick(PPM_NEUTRAL_VALUE);
+			setRoll(PPM_NEUTRAL_VALUE);
       vTaskDelayUntil(&lastWake, 10 / portTICK_RATE_MS);
 		}
   }

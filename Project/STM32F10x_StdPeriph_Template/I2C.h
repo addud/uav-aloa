@@ -6,7 +6,7 @@
 
 //I2C communication errors
 
-#define IS_I2C_ERROR(X) ((X) >= (I2C_ERROR_START_VALUE) true ? : false)
+#define IS_I2C_ERROR(X) ( ((X) >= (I2C_ERROR_START_VALUE)) ? true : false)
 
 #define I2C_ERROR_START_VALUE													0xF000
 
