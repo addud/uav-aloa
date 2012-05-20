@@ -11,12 +11,12 @@
 #define CH_NICK		2
 #define CH_YAW		3
 #define CH_POTI1	4 //SW2	- 2 positions
-#define CH_POTI2	5	//CTRL10
-#define CH_POTI3	6	//CTRL6	- 3 positions
+#define CH_POTI2	5	//CTRL10 - 3 positions
+#define CH_POTI3	6	//CTRL6	
 #define CH_POTI4 	7	//SW3	- 2 positions
 #define CH_POTI5	8	//CTRL9	- 3 positions
 #define CH_POTI6	9	//SW8	- 2 positions
-#define CH_POTI7	10 //CTRL7
+#define CH_POTI7	10 //CTRL7 
 #define CH_POTI8 	11 //SW9 - 2 positions
 
 //PPM measured pulse period values
@@ -403,11 +403,11 @@ int16_t getYaw() {
 ppm_switch_values_t getPoti1() {
 	return getSwitchValue(PPM_in[CH_POTI1]);
 }
-int16_t getPoti2() {
+ppm_switch_values_t getPoti2() {
 	return getSwitchValue(PPM_in[CH_POTI2]);
 }
-ppm_switch_values_t getPoti3() {
-	return getSwitchValue(PPM_in[CH_POTI3]);
+int16_t getPoti3() {
+	return PPM_in[CH_POTI3];
 }
 ppm_switch_values_t getPoti4() {
 	return getSwitchValue(PPM_in[CH_POTI4]);
@@ -442,11 +442,11 @@ void setYaw(int16_t value) {
 void setPoti1(ppm_switch_values_t value) {
 	setSwitchValue(CH_POTI1,value);
 }
-void setPoti2(int16_t value) {
-	setChannel(CH_POTI2,value);
+void setPoti2(ppm_switch_values_t value) {
+	setSwitchValue(CH_POTI2,value);
 }
-void setPoti3(ppm_switch_values_t value) {
-	setSwitchValue(CH_POTI3,value);
+void setPoti3(int16_t value) {
+	setChannel(CH_POTI3,value);
 }
 void setPoti4(ppm_switch_values_t value) {
 	setSwitchValue(CH_POTI4,value);
