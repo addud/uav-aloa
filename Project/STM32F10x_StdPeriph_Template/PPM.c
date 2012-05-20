@@ -404,7 +404,7 @@ ppm_switch_values_t getPoti1() {
 	return getSwitchValue(PPM_in[CH_POTI1]);
 }
 int16_t getPoti2() {
-	return PPM_in[CH_POTI2];
+	return getSwitchValue(PPM_in[CH_POTI2]);
 }
 ppm_switch_values_t getPoti3() {
 	return getSwitchValue(PPM_in[CH_POTI3]);
