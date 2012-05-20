@@ -27,6 +27,12 @@
 #include "stm32f10x.h"
 #include <stdbool.h>
 
+//PPM measured pulse period values
+#define PPM_LOW										520 //low period of each data pulse
+#define PPM_MIN_HIGH							600	//minimum high period of a data pulse
+#define PPM_NEUTRAL_HIGH					1000 //neutral high period of a data pulse
+#define PPM_MAX_HIGH							1400 //maximum high period of a data pulse
+
 //PPM values
 #define PPM_MIN_VALUE							(PPM_MIN_HIGH - PPM_NEUTRAL_HIGH)
 #define PPM_MAX_VALUE							(PPM_MAX_HIGH - PPM_NEUTRAL_HIGH)
