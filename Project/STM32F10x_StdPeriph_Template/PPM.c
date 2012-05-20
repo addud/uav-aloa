@@ -6,9 +6,9 @@
 #define MAX_CHANNELS	12
 
 //PPPM channels
-#define CH_NICK		0
+#define CH_GAS		0
 #define CH_ROLL		1
-#define CH_GAS		2
+#define CH_NICK		2
 #define CH_YAW		3
 #define CH_POTI1	4 //SW2	- 2 positions
 #define CH_POTI2	5	//CTRL10
