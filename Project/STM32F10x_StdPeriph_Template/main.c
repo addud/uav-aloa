@@ -96,8 +96,8 @@
 
 
 #define OUT_OF_RANGE        160//0xFFFF
-#define Kp                  0.4
-#define Kd                  5
+#define Kp                  0.5
+#define Kd                  3
 #define Tsample             (50 / portTICK_RATE_MS)
 
 #define OA_NICK_GAIN					55
