@@ -271,6 +271,7 @@ void DataTask(void *pvParameters)
     // average of the last 4 measurements
     if(distances[3] != OUT_OF_RANGE){
       distanceAverage = (uint16_t)((uint32_t)(distances[0] + distances[1] + distances[2] + distances[3]) / 4);
+      
       if(calibrationFlag == true)
       {
         landingLimit = distanceAverage + 5; // landing limit calibration
