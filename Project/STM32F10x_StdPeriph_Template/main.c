@@ -237,11 +237,11 @@ void DataTask(void *pvParameters)
   /* Start ADC1 Software Conversion */ 
   ADC_SoftwareStartConvCmd(ADC1, ENABLE);
 
-
-
-
-  for(;;) {
-
+  /* --------------------------------------------------------------*/
+  /*----------------- Landing Limit Calibratin --------------------*/
+                  
+  while(calibrationFlag == true)
+  {
     readVoltage = (uint16_t)((uint32_t)(3000 * ADC_GetConversionValue(ADC1)) / 0x1000); // conversion to voltage "mV" units
     //liniarize the IR sensor curve equation
     if((readVoltage > 850) && (readVoltage < 2150)){
@@ -277,6 +277,46 @@ void DataTask(void *pvParameters)
         landingLimit = distanceAverage + 5; // landing limit calibration
         calibrationFlag = false; 
       } 
+    }
+    else{
+      distanceAverage = OUT_OF_RANGE;
+    }
+  }
+
+  /*--------------------------------------------------------------------------------*/
+
+
+  for(;;) {
+
+    readVoltage = (uint16_t)((uint32_t)(3000 * ADC_GetConversionValue(ADC1)) / 0x1000); // conversion to voltage "mV" units
+    //liniarize the IR sensor curve equation
+    if((readVoltage > 850) && (readVoltage < 2150)){
+      //distanceCm = (uint16_t)((uint32_t)(3460 - readVoltage) / 38);
+      distanceCm = (uint16_t)((uint32_t)(3*(2575 - readVoltage)) / 86);
+    }
+    else if((readVoltage > 400) && (readVoltage <= 850)){
+      //distanceCm = (uint16_t)((uint32_t)(3 * (1400 - readVoltage)) / 20);
+      distanceCm = (uint16_t)((1150 - readVoltage) / 5);
+    }
+    else{
+      distanceCm = OUT_OF_RANGE;  // out of range
+    }
+
+    //store last measurement
+    if( distanceCm != OUT_OF_RANGE ){
+      distances[i] =  distanceCm;
+      i++;
+    }
+    else{
+      for(i = 0; i < 4; i++) distances[i] = OUT_OF_RANGE;
+      i = 0;
+    }
+    
+    if(i > 3) i = 0;  //ring buffer
+
+    // average of the last 4 measurements
+    if(distances[3] != OUT_OF_RANGE){
+      distanceAverage = (uint16_t)((uint32_t)(distances[0] + distances[1] + distances[2] + distances[3]) / 4);
     }
     else{
       distanceAverage = OUT_OF_RANGE;
