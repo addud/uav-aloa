@@ -55,11 +55,11 @@
 #define Kd                  3
 #define Tsample             (50 / portTICK_RATE_MS)
 
-#define OA_NICK_GAIN					50
-#define OA_GAS_GAIN						50
-#define OA_ROLL_GAIN					75
+#define OA_NICK_GAIN					100
+#define OA_GAS_GAIN						150
+#define OA_ROLL_GAIN					90
 
-#define OA_INERTIAL_TIMEOUT		15
+#define OA_INERTIAL_TIMEOUT		5
 
 volatile uint16_t readVoltage = 0;
 volatile uint16_t distanceCm = 0;
@@ -140,16 +140,17 @@ void OATask(void *pvParameters)
 			if (IS_I2C_ERROR(data)) {
 
 				setNick(PPM_NEUTRAL_VALUE);	
-				setRoll(PPM_NEUTRAL_VALUE);
+//				setRoll(PPM_NEUTRAL_VALUE);
+				setGas(PPM_NEUTRAL_VALUE);
 			
 			} else {
 	
-//				data = MedianFilter(data);
+				data = MedianFilter(data);
 	
 				if (getPoti8() ==  SW_ON) {
 	
-//					inertial_timeout = OA_INERTIAL_TIMEOUT;
-					setNick(getNick() - OA_NICK_GAIN);	
+					inertial_timeout = OA_INERTIAL_TIMEOUT;
+//					setNick(getNick() - OA_NICK_GAIN);	
 					
 				}
 
@@ -162,15 +163,16 @@ void OATask(void *pvParameters)
 				if (inertial_timeout > 0) {
 	
 					setNick(PPM_NEUTRAL_VALUE);
-	//				setGas(getGas() + OA_GAS_GAIN);	
-					setRoll(getRoll() + OA_ROLL_GAIN);
+					setGas(getGas() + OA_GAS_GAIN);
+//					setRoll(getRoll() + OA_ROLL_GAIN);
 								
 					inertial_timeout--;
 	
 				} else {
 	
 					setNick(getNick() + OA_NICK_GAIN);
-					setRoll(PPM_NEUTRAL_VALUE);
+//					setRoll(PPM_NEUTRAL_VALUE);
+					setGas(PPM_NEUTRAL_VALUE);
 	
 				}
 	
@@ -178,8 +180,12 @@ void OATask(void *pvParameters)
 
 		} else {
 			setNick(PPM_NEUTRAL_VALUE);
-			setRoll(PPM_NEUTRAL_VALUE);
-      vTaskDelayUntil(&lastWake, 10 / portTICK_RATE_MS);
+//			setRoll(PPM_NEUTRAL_VALUE);
+			if (getPoti6() != SW_ON) {
+				setGas(PPM_NEUTRAL_VALUE);
+			}
+
+			vTaskDelayUntil(&lastWake, 10 / portTICK_RATE_MS);
 		}
   }
   
@@ -317,7 +323,9 @@ static int16_t throttlePPM;
     }
     else
     {
-      setGas(PPM_NEUTRAL_VALUE);
+			if (getPoti5() != SW_ON) {
+				setGas(PPM_NEUTRAL_VALUE);
+			}
       setYaw(PPM_NEUTRAL_VALUE);
     }        
 

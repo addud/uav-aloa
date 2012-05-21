@@ -1,5 +1,5 @@
 #define STOPPER 0                                      /* Smaller than any datum */
-#define MEDIAN_FILTER_SIZE    (5)
+#define MEDIAN_FILTER_SIZE    (3)
 
 #include "stm32f10x.h"
 #include "filter.h"
@@ -24,10 +24,10 @@ uint16_t MedianFilter(uint16_t datum)
  struct pair *median;                                 /* Pointer to median */
  uint16_t i;
 
- if (datum == STOPPER)
- {
-   datum = STOPPER + 1;                             /* No stoppers allowed. */
- }
+// if (datum == STOPPER)
+// {
+//   datum = STOPPER + 1;                             /* No stoppers allowed. */
+// }
 
  if ( (++datpoint - buffer) >= MEDIAN_FILTER_SIZE)
  {

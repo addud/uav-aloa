@@ -30,8 +30,6 @@ uint16_t SonarApplyMedianFilter(uint8_t sonar, uint16_t data);
 
 const uint8_t sonar_address_lookup[NUMBER_OF_SONARS] = {ADRR_FRONT_SONAR}; 
 
-static uint16_t median_filter[NUMBER_OF_SONARS][MEDIAN_FLTER_LENGTH] = {100, 100, 100, 100, 100};
-
 bool SonarIsObstacle(uint16_t data) {	
 	if (data != NO_OBSTACLE) {
 		return true;
@@ -59,25 +57,3 @@ uint16_t SonarReadData(uint8_t sonar) {
 	return I2CReadData(sonar_address_lookup[sonar], ADDR_DATA_REGISTER);
 
 }	 
-
-uint16_t SonarApplyMedianFilter(uint8_t sonar, uint16_t data) {
-	int i,j;
-
-	for (i=0;i<MEDIAN_FLTER_LENGTH;i++) {
-		if (data < median_filter[sonar][i]) {
-		 	for (j=MEDIAN_FLTER_LENGTH-1;j>i;j++) {
-				median_filter[sonar][j] = median_filter[sonar][j-1]; 	
-			}
-
-			median_filter[sonar][i] = data;
-			break;
-		}
-	}
-
-	if (i == MEDIAN_FLTER_LENGTH) {
-	 	median_filter[sonar][i-1] = data;
-	}
-
-	return median_filter[sonar][MEDIAN_FLTER_LENGTH/2];
-
-}
