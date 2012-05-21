@@ -68,6 +68,8 @@ volatile int16_t distanceCurrent = 0;
 volatile int16_t distanceOld = 0;
 volatile int16_t throttleDiff = 0;
 
+uint16_t landingLimit = 35;
+
 int16_t altitudeHold = 0, positionHold = 0;
 int16_t autoLanding = 0;
 
@@ -140,8 +142,8 @@ void OATask(void *pvParameters)
 			if (IS_I2C_ERROR(data)) {
 
 				setNick(PPM_NEUTRAL_VALUE);	
-//				setRoll(PPM_NEUTRAL_VALUE);
-				setGas(PPM_NEUTRAL_VALUE);
+				setRoll(PPM_NEUTRAL_VALUE);
+//				setGas(PPM_NEUTRAL_VALUE);
 			
 			} else {
 	
@@ -150,7 +152,7 @@ void OATask(void *pvParameters)
 				if (getPoti8() ==  SW_ON) {
 	
 					inertial_timeout = OA_INERTIAL_TIMEOUT;
-//					setNick(getNick() - OA_NICK_GAIN);	
+					setNick(getNick() - OA_NICK_GAIN);	
 					
 				}
 
@@ -163,16 +165,16 @@ void OATask(void *pvParameters)
 				if (inertial_timeout > 0) {
 	
 					setNick(PPM_NEUTRAL_VALUE);
-					setGas(getGas() + OA_GAS_GAIN);
-//					setRoll(getRoll() + OA_ROLL_GAIN);
+//					setGas(getGas() + OA_GAS_GAIN);
+					setRoll(getRoll() + OA_ROLL_GAIN);
 								
 					inertial_timeout--;
 	
 				} else {
 	
 					setNick(getNick() + OA_NICK_GAIN);
-//					setRoll(PPM_NEUTRAL_VALUE);
-					setGas(PPM_NEUTRAL_VALUE);
+					setRoll(PPM_NEUTRAL_VALUE);
+//					setGas(PPM_NEUTRAL_VALUE);
 	
 				}
 	
@@ -180,10 +182,10 @@ void OATask(void *pvParameters)
 
 		} else {
 			setNick(PPM_NEUTRAL_VALUE);
-//			setRoll(PPM_NEUTRAL_VALUE);
-			if (getPoti6() != SW_ON) {
-				setGas(PPM_NEUTRAL_VALUE);
-			}
+			setRoll(PPM_NEUTRAL_VALUE);
+//			if (getPoti6() != SW_ON) {
+//				setGas(PPM_NEUTRAL_VALUE);
+//			}
 
 			vTaskDelayUntil(&lastWake, 10 / portTICK_RATE_MS);
 		}
@@ -197,6 +199,7 @@ void DataTask(void *pvParameters)
   portTickType lastWake = xTaskGetTickCount();
   uint8_t i = 0;
   uint16_t distances[4];
+  static uint8_t calibrationFlag = true;
   
 
   // init ADC
@@ -267,7 +270,12 @@ void DataTask(void *pvParameters)
 
     // average of the last 4 measurements
     if(distances[3] != OUT_OF_RANGE){
-      distanceAverage = (uint16_t)((uint32_t)(distances[0] + distances[1] + distances[2] + distances[3]) / 4); 
+      distanceAverage = (uint16_t)((uint32_t)(distances[0] + distances[1] + distances[2] + distances[3]) / 4);
+      if(calibrationFlag == true)
+      {
+        landingLimit = distanceAverage + 5; // landing limit calibration
+        calibrationFlag = false; 
+      } 
     }
     else{
       distanceAverage = OUT_OF_RANGE;
@@ -315,7 +323,7 @@ static int16_t throttlePPM;
   
       distanceOld = distanceCurrent;
 
-      if(distanceCurrent < 30)
+      if(distanceCurrent < landingLimit)
       {
         setGas(PPM_MIN_VALUE);
         setYaw(PPM_MAX_VALUE);
@@ -323,9 +331,9 @@ static int16_t throttlePPM;
     }
     else
     {
-			if (getPoti5() != SW_ON) {
+//			if (getPoti5() != SW_ON) {
 				setGas(PPM_NEUTRAL_VALUE);
-			}
+//			}
       setYaw(PPM_NEUTRAL_VALUE);
     }        
 
