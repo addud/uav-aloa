@@ -1,3 +1,11 @@
+/* ---------------------------------------------------------------------------
+** PPM.c
+**
+** This file implements the PPM communication with the radio receiver
+** and the FlightCtrl
+**
+** Author: Adrian Dudau
+** -------------------------------------------------------------------------*/
 
 #include "PPM.h"
 
@@ -58,6 +66,9 @@ RCC_ClocksTypeDef RCC_ClockFreq;
 volatile int16_t PPM_in[MAX_CHANNELS], PPM_diff[MAX_CHANNELS], PPM_out[MAX_CHANNELS] = {0}; //PPM_out[MAX_CHANNELS] =  {-400, -400, 400, 400, 0, 0, 123, -123, -400, -400, 400, 400};
 volatile bool PPM_wd = false;
 
+/* ---------------------------------------------------------------------------
+** Initializes the HW modules needed for PPM communication
+** -------------------------------------------------------------------------*/
 void initPPM(void) {
 	   /* System Clocks Configuration */
   RCC_Configuration_PPM();
@@ -139,6 +150,7 @@ void NVIC_Configuration_PPM(void)
 
 }
 
+
 	/* TIM3 configuration --------------------------------------
      The PPM input must be connected TIM3 CH2 pin (PA.07)  
      The PPM ouput must be connected TIM3 CH1 pin (PA.06) 
@@ -152,9 +164,9 @@ void TIM_Configuration_PPM(void) {
   TIM_TimeBaseStructInit( &TIM_TimeBaseStructure );
 
   /* Configuration of timer 2. This timer will generate an
-     overflow/update interrupt (TIM2_IRQChannel) every 30ms */
+     overflow/update interrupt (TIM2_IRQn) every 30ms */
   TIM_TimeBaseStructure.TIM_Period = 29999;
-  TIM_TimeBaseStructure.TIM_Prescaler = 71; ////prescale to get 1 tick/us
+  TIM_TimeBaseStructure.TIM_Prescaler = 71; //prescale to get 1 tick/us
   TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
   TIM_TimeBaseInit( TIM2, &TIM_TimeBaseStructure );
 
@@ -204,18 +216,23 @@ void TIM_Configuration_PPM(void) {
   TIM_Cmd(TIM3, ENABLE);
 }
 
+
+/* ---------------------------------------------------------------------------
+** ISR for dealing with TIM2 interrupts - aka the watchdog
+** -------------------------------------------------------------------------*/
 void TIM2_IRQHandler(void)
 {
+	//set the WD falg active
 	PPMSetWD();
 	
 	// Clear pending-bit of interrupt
   TIM_ClearITPendingBit( TIM2, TIM_IT_Update );
 
 }
-/********************************************************************/
-/*         Every time a positive edge is detected at PD6            */
-/********************************************************************/
-/*                               t-Frame
+
+
+
+/*                               PPM pulse format
     <----------------------------------------------------------------------->
      ____   ______   _____   ________                ______    sync gap      ____
     |    | |      | |     | |        |              |      |                |
@@ -234,8 +251,10 @@ void TIM2_IRQHandler(void)
  the syncronization gap.
  */
 
-//TIM3 interrupt routine
-//reads the PPM pulse
+/* ---------------------------------------------------------------------------
+** ISR for dealing with TIM2 interrupts - aka the watchdog
+** -------------------------------------------------------------------------*/
+
 void TIM3_IRQHandler(void)
 { 
   static uint8_t index = MAX_CHANNELS, index_in = MAX_CHANNELS, index_out = MAX_CHANNELS;
@@ -247,6 +266,7 @@ void TIM3_IRQHandler(void)
 	static pulse_t pulse = PULSE_LOW;
 	static int16_t elapsedTime = 0;
 
+	/*         Every time a rising edge is detected on the inpur channel            */
   if(TIM_GetITStatus(TIM3, TIM_IT_CC2) == SET) 
   {
     /* Clear TIM3 Capture compare interrupt pending bit */
@@ -254,7 +274,7 @@ void TIM3_IRQHandler(void)
 
 		capture = (uint16_t) TIM_GetCapture2(TIM3);
 	
-		//if the CCR didn't overflow
+		//handle CCR register overflow
 		if (capture >= oldCapture)	{
 			signal = capture - oldCapture;
 		} else {
@@ -262,14 +282,8 @@ void TIM3_IRQHandler(void)
 		}
 	  oldCapture = capture;
 
-//		if (index >= MAX_CHANNELS) {
-//			index=0;
-//		} else {
-//			PPM_in[index] = signal-PPM_LOW;
-//			index++;
-//		}
-
-	  if ((signal > PPM_MIN_SYNCH - PPM_PULSE_HYSTERESIS) && (signal < PPM_MAX_SYNCH + PPM_PULSE_HYSTERESIS)) {
+	  //check if synch pulse is sent
+		if ((signal > PPM_MIN_SYNCH - PPM_PULSE_HYSTERESIS) && (signal < PPM_MAX_SYNCH + PPM_PULSE_HYSTERESIS)) {
 	    index_in = 0;
 	  } else { // within the PPM frame
 	    if (index_in < MAX_CHANNELS) { // PPM24 supports 12 channels
@@ -285,8 +299,10 @@ void TIM3_IRQHandler(void)
 	    }
 	  }
 		
+		//take care to reset the WD
 		PPMResetWD();
 
+	/*         Every time a pulse (low or high) has been sent on the output channel            */
   }	else if(TIM_GetITStatus(TIM3, TIM_IT_CC1) == SET) {
     /* Clear TIM2 Capture compare interrupt pending bit */
     TIM_ClearITPendingBit(TIM3, TIM_IT_CC1);
@@ -313,12 +329,14 @@ void TIM3_IRQHandler(void)
 						compare += PPM_out[index_out] + PPM_NEUTRAL_HIGH;
 						elapsedTime += PPM_out[index_out] + PPM_NEUTRAL_HIGH;
 	
-						/* Once set, the new PPM difference is applied every time 
+						/* Once set, the new PPM value (PPM_out) is sent every time 
+						instead of the read value (PPM_in).
 						To stop sending it, it must be cleared manually (set to 0) */
 	
 	//					PPM_out[index_out] = 0;
 	
 					} else {
+						//otherwise forward the data read from the receiver
 						compare += PPM_in[index_out] + PPM_NEUTRAL_HIGH;
 						elapsedTime += PPM_in[index_out] + PPM_NEUTRAL_HIGH;
 					}
@@ -332,6 +350,10 @@ void TIM3_IRQHandler(void)
 		TIM_SetCompare1(TIM3, compare);
 	}
 }
+
+/* ---------------------------------------------------------------------------
+** Functions to handle the watchdog	flag
+** -------------------------------------------------------------------------*/
 											
 bool PPMIsSetWD() {
 	return (PPM_wd == true);
@@ -346,11 +368,12 @@ void PPMResetWD() {
 	PPM_wd = false;
 }
 
-//set a value to a given channel
+/* ---------------------------------------------------------------------------
+** Sets a value to a given PPM channel
+** -------------------------------------------------------------------------*/
 void setChannel(uint8_t channel, int16_t value) {
 
-//	value += PPM_NEUTRAL_HIGH; 
-
+	//trim the value first
 	if (value < PPM_MIN_HIGH - PPM_NEUTRAL_HIGH) {
 		value = PPM_MIN_HIGH;
 	} else if (value > PPM_MAX_HIGH  - PPM_NEUTRAL_HIGH) {
@@ -360,6 +383,9 @@ void setChannel(uint8_t channel, int16_t value) {
 	PPM_out[channel] = value;
 }
 
+/* ---------------------------------------------------------------------------
+** Converts the raw value of a PPM channel into a state of a 3-way switch 
+** -------------------------------------------------------------------------*/
 ppm_switch_values_t getSwitchValue(int16_t value) {
 	if (value >= PPM_MAX_VALUE - PPM_SWITCH_VALUE_JITTER) {
 		return SW_ON;
@@ -372,6 +398,10 @@ ppm_switch_values_t getSwitchValue(int16_t value) {
 	}
 } 
 
+/* ---------------------------------------------------------------------------
+** Sets the raw value to a PPM channel according to the corresponding 
+** 3-way switch state wanted
+** -------------------------------------------------------------------------*/
 void setSwitchValue(uint8_t channel, ppm_switch_values_t value) {
 	if (value == SW_ON) {
 		setChannel(channel, PPM_MAX_VALUE); 	
@@ -382,6 +412,11 @@ void setSwitchValue(uint8_t channel, ppm_switch_values_t value) {
 	}
 } 
 
+/* ---------------------------------------------------------------------------
+** Getter and setter functions for each of the PPM channels
+** The channels corresponding to 3-way and 2-way switches are read and set
+** using the ppm_switch_values_t enumeration of switch states
+** -------------------------------------------------------------------------*/
 int16_t getNick() {
 	return PPM_in[CH_NICK];
 }

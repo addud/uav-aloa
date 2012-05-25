@@ -1,10 +1,18 @@
+/* ---------------------------------------------------------------------------
+** I2C.c
+**
+** This file implements the I2C communication with the ultrasound sensor (sonar)
+**
+** Author: Adrian Dudau
+** -------------------------------------------------------------------------*/
+
 #ifndef __I2C_H
 #define __I2C_H
 
 #include "stm32f10x.h"
 
 
-//I2C communication errors
+/* I2C communication errors	*/
 
 #define IS_I2C_ERROR(X) ( ((X) >= (I2C_ERROR_START_VALUE)) ? true : false)
 
@@ -29,4 +37,4 @@ void I2CInit(void);
 uint16_t I2CSendCommand(uint8_t device_address, uint8_t command_address, uint8_t command);
 uint16_t I2CReadData(uint8_t device_address, uint8_t register_address);
 
-#endif
+#endif /* __I2C_H */

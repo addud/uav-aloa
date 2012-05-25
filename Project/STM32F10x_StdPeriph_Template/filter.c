@@ -1,10 +1,25 @@
+/* ---------------------------------------------------------------------------
+** filter.c
+**
+** This file provides filtering methods for the values read from the sonar
+**
+** Author: Adrian Dudau
+** -------------------------------------------------------------------------*/
+
 #define STOPPER 0                                      /* Smaller than any datum */
-#define MEDIAN_FILTER_SIZE    (3)
+#define MEDIAN_FILTER_SIZE    (3)											 /* Size of the filter window */
 
 #include "stm32f10x.h"
 #include "filter.h"
 #include "FreeRTOS.h"
 
+
+/* ---------------------------------------------------------------------------
+** Implements a median filter for the values read from the sonar. 
+** It is currently designed for use with a single stream of values
+** (from one sonar).
+** It needs to be redesigned for use with multiple sonars
+** -------------------------------------------------------------------------*/
 
 uint16_t MedianFilter(uint16_t datum)
 {

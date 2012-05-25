@@ -1,25 +1,13 @@
-/**
-  ******************************************************************************
-  * @file    Project/STM32F10x_StdPeriph_Template/main.c 
-  * @author  MCD Application Team
-  * @version V3.5.0
-  * @date    08-April-2011
-  * @brief   Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
-  * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
-  * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
-  * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
-  * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
-  * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
-  *
-  * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
-  ******************************************************************************
-  */  
+/* ---------------------------------------------------------------------------
+** main.c
+**
+** This file provides the main functionality of the application.
+** It initializes the application modules and implements the concurrent tasks
+** implementing the Obstacle Avoidance (OA) and Automated Landing	(AL) features
+**
+** Authors: Adrian Dudau, Adrian Caragea
+** -------------------------------------------------------------------------*/
 
-/* Includes ------------------------------------------------------------------*/
 #include "stm32f10x.h"
 #include "stm32_eval.h"
 #include <stdio.h>
@@ -49,18 +37,25 @@
 /* Library includes. */
 #include "stm32f10x_it.h"
 
-
+/* Defines for the AL module. */
 #define OUT_OF_RANGE        160//0xFFFF
 #define Kp                  0.5
 #define Kd                  3
 #define Tsample             (50 / portTICK_RATE_MS)
 
-#define OA_NICK_GAIN					100
-#define OA_GAS_GAIN						150
-#define OA_ROLL_GAIN					90
+/* Defines for the OA module. */
+#define OA_NICK_GAIN					50
+#define OA_GAS_GAIN						80
+#define OA_ROLL_GAIN					50
 
+/* The number of cycles the kopter keeps avoiding the obstacle after 
+** the obstacle is not detected anymor.
+** This helps compensate for the limited angle view of the front sonar.
+*/ 
 #define OA_INERTIAL_TIMEOUT		5
 
+
+/* Some variables for the AL module. */
 volatile uint16_t readVoltage = 0;
 volatile uint16_t distanceCm = 0;
 volatile uint16_t distanceAverage = 0;
@@ -73,28 +68,14 @@ uint16_t landingLimit = 35;
 int16_t altitudeHold = 0, positionHold = 0;
 int16_t autoLanding = 0;
 
-/* Private functions ---------------------------------------------------------*/
-void MyTask(void *pvParameters)
-{
-	int MyCnt=0;
-
-	for(;;) {
-		MyCnt++;
-    vTaskDelay(100 / portTICK_RATE_MS);
-  }
-
-}
-
-void AddTask(void *pvParameters)
-{
-	int AddCnt=0;
-
-	for(;;) {
-		AddCnt++;
-    vTaskDelay(100 / portTICK_RATE_MS);
-  }
-
-}
+/*
+******** Connections for the no-name chinese devboard *************
+** SCL -> PB6 -> XS2-10
+** SDA -> PB7 -> XS2-4
+**
+** PPM_Receiver -> PA7 -> XS2-6
+** PPM_FlightCtrl -> PA6 -> XS2-8
+*/
 
 void GPIO_Configuration_ADC(void)
 {
@@ -121,6 +102,17 @@ void RCC_Configuration_ADC(void)
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_GPIOC, ENABLE);
 }
 
+
+/* ---------------------------------------------------------------------------
+** Implements the OA feature
+** 
+** Basic functionality: 
+** When the user enables the OA feature, the kopter simulates going to a waypoint
+** by going forwards. Once an obstacle is detected in front, it stops going
+** forward and tries to avoid it through the left. Once the obstacle has been 
+** cleared, the kopter resumes going forward. (simulates continuing towards the waypoint)
+**
+** -------------------------------------------------------------------------*/
 void OATask(void *pvParameters)
 {
 	static uint16_t data;
@@ -130,28 +122,32 @@ void OATask(void *pvParameters)
 	I2CInit();
 
 	for(;;) {
-//		if (true) {
 		if (getPoti5() == SW_ON) {
 			
+			// Start the sonar ranging
 			SonarStartRanging(FRONT_SONAR);
 			
+			//wait until raning is done
 	    vTaskDelay(SONAR_RESPONSE_DELAY / portTICK_RATE_MS);
 
 			data = SonarReadData(FRONT_SONAR);
 
+			//check for communication errors 
 			if (IS_I2C_ERROR(data)) {
-
+				//  return control of the	kopter to the user
 				setNick(PPM_NEUTRAL_VALUE);	
 				setRoll(PPM_NEUTRAL_VALUE);
 //				setGas(PPM_NEUTRAL_VALUE);
 			
 			} else {
-	
+				//filter the data
 				data = MedianFilter(data);
 	
+				// The user can flip the Poti8 switch to force the kopter to go backwards while in OA mode
+				// helps to quickly avoid crashes in case something goes wrong
 				if (getPoti8() ==  SW_ON) {
 	
-					inertial_timeout = OA_INERTIAL_TIMEOUT;
+//					inertial_timeout = OA_INERTIAL_TIMEOUT;
 					setNick(getNick() - OA_NICK_GAIN);	
 					
 				}
@@ -163,16 +159,19 @@ void OATask(void *pvParameters)
 				} 
 				
 				if (inertial_timeout > 0) {
-	
+					//if we still need to keep on avoiding the obstacle
+					// don't go forwards anymore - the user still can go forwards manually if needed
 					setNick(PPM_NEUTRAL_VALUE);
 //					setGas(getGas() + OA_GAS_GAIN);
+					//go left
 					setRoll(getRoll() + OA_ROLL_GAIN);
 								
 					inertial_timeout--;
 	
 				} else {
-	
+					//resume going forwards
 					setNick(getNick() + OA_NICK_GAIN);
+					// don't go left anymore - the user still can go left manually if needed
 					setRoll(PPM_NEUTRAL_VALUE);
 //					setGas(PPM_NEUTRAL_VALUE);
 	
@@ -181,17 +180,17 @@ void OATask(void *pvParameters)
 			}
 
 		} else {
+			//if OA function is not enabled, return control to the user
 			setNick(PPM_NEUTRAL_VALUE);
 			setRoll(PPM_NEUTRAL_VALUE);
-//			if (getPoti6() != SW_ON) {
-//				setGas(PPM_NEUTRAL_VALUE);
-//			}
-
+			//run the task with a 10 ms period while the OA function is not enabled
+			//monitors the flip of the OA switch
 			vTaskDelayUntil(&lastWake, 10 / portTICK_RATE_MS);
 		}
   }
   
 }
+
 
 void DataTask(void *pvParameters)
 {
@@ -326,6 +325,7 @@ void DataTask(void *pvParameters)
   }
 }
 
+
 void PlannerTask(void *pvParameters){
 
 
@@ -397,9 +397,6 @@ int main(void)
   NVIC_PriorityGroupConfig( NVIC_PriorityGroup_4 );
 
 	initPPM();
-
-  //xTaskCreate( MyTask, ( signed portCHAR * ) "MyTask", configMINIMAL_STACK_SIZE, (void*)NULL, 2, NULL );
-  //xTaskCreate( AddTask, ( signed portCHAR * ) "AddTask", configMINIMAL_STACK_SIZE, (void*)NULL, 2, NULL );
 
   xTaskCreate( DataTask, ( signed portCHAR * ) "DataTask", configMINIMAL_STACK_SIZE+64, (void*)NULL, 4, NULL );
   xTaskCreate( PlannerTask, ( signed portCHAR * ) "PlannerTask", configMINIMAL_STACK_SIZE+128, (void*)NULL, 3, NULL );

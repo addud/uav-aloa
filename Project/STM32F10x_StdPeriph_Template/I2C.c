@@ -1,3 +1,11 @@
+/* ---------------------------------------------------------------------------
+** I2C.c
+**
+** This file implements the I2C communication with the ultrasound sensor (sonar)
+**
+** Author: Adrian Dudau
+** -------------------------------------------------------------------------*/
+
 
 #include "stm32f10x_it.h"
 #include "I2C.h"
@@ -5,12 +13,15 @@
 #define I2C_SPEED               300000
 #define I2C_TIMEOUT							0x1000
 
-/* Uncomment this define to remap the I2C pins from SCK -- PB6, SDA -- PB7 to 
+/* Uncomment this to remap the I2C pins from SCK -- PB6, SDA -- PB7 to 
 	 alternate function pins SCL -- PB8,  SDA -- PB9 	*/
+
 //#define I2C_REMAP
 
 /*
-To start a measurement a write command:
+This is the flow of the I2C communication with the SRF02 ultrasound sensors: 
+
+To start a measurement write a command:
 
 1. Send a start sequence
 2. Send 0xE0 ( I2C address of the SRF02 with the R/W bit low (even address - write))
@@ -30,6 +41,9 @@ To read the range:
 
 */
 
+/* ---------------------------------------------------------------------------
+** Initialize the HW modules needed for I2C communication
+** -------------------------------------------------------------------------*/
 void I2CInit(void)
 { 
   I2C_InitTypeDef  I2C_InitStructure;
@@ -55,8 +69,6 @@ void I2CInit(void)
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_OD;
 
-
-	
 	#ifdef I2C_REMAP
 
 	GPIO_PinRemapConfig(GPIO_Remap_I2C1, ENABLE);
@@ -87,13 +99,19 @@ void I2CInit(void)
    
 }
 
-
+/* ---------------------------------------------------------------------------
+** Implements behaviour in case of I2C bus timeout
+** -------------------------------------------------------------------------*/
 uint16_t I2Ctimeout(uint16_t I2C_error) {
-	 I2CInit();
-	 return I2C_error;
+	//reinitialize the I2c module - sometimes helps recovering from errors
+	I2CInit();
+	return I2C_error;
 }
 
-
+/* ---------------------------------------------------------------------------
+** Sends a command to the SFR02 sensor using the I2C bus 
+** Implements the communication protocol specific to the SFR02 sensors
+** -------------------------------------------------------------------------*/
 uint16_t I2CSendCommand(uint8_t device_address, uint8_t command_address, uint8_t command)
 { 
 	uint16_t timeout;
@@ -177,7 +195,10 @@ uint16_t I2CSendCommand(uint8_t device_address, uint8_t command_address, uint8_t
   return 1;
 }
 
-
+/* ---------------------------------------------------------------------------
+** Reads data from the SFR02 sensor
+** Implements the communication protocol specific to the SFR02 sensors
+** -------------------------------------------------------------------------*/
 uint16_t I2CReadData(uint8_t device_address, uint8_t register_address) {
 	uint16_t timeout;
 	static uint16_t	data=0;
